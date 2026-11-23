@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#2563eb">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Ujian Online</title>
+<title>Nerin Exam365</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Ujian%20Online%22%2C%22short_name%22%3A%22Ujian%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23ffffff%22%2C%22theme_color%22%3A%22%232563eb%22%7D">
 <style>
@@ -557,7 +557,7 @@ function renderShell() {
   const nav = menus.map(m => `<button class="nav ${m.k === S.page ? 'on' : ''}" data-act="nav" data-k="${m.k}">${ic(m.i)}<span>${esc(m.t)}</span></button>`).join('');
   const bn = menus.map(m => `<button class="bnav ${m.k === S.page ? 'on' : ''}" data-act="nav" data-k="${m.k}">${ic(m.i, 20)}<span>${esc(m.s)}</span></button>`).join('');
   const nm = S.role === 'admin' ? (S.user?.email || 'Admin') : (S.user?.nama || '');
-  $('#view').innerHTML = `<div class="shell"><aside class="side glass"><div class="brand">${ic('file', 26)}<div><b>Ujian Online</b><small>${esc(S.cfg.namaSekolah || '')}</small></div></div><nav>${nav}</nav><div class="usr"><div><b>${esc(nm)}</b><small>${S.role === 'admin' ? 'Administrator' : esc(S.user?.kelas || 'Peserta')}</small></div><button class="ib" data-act="logout" title="Keluar">${ic('logout')}</button></div></aside><main class="main"><div class="mtop"><b>${esc(S.cfg.namaSekolah || 'Ujian Online')}</b><button class="ib" data-act="logout" title="Keluar">${ic('logout')}</button></div>${previewBadge()}<div id="page"></div></main><nav class="bottom glass">${bn}</nav></div>`;
+  $('#view').innerHTML = `<div class="shell"><aside class="side glass"><div class="brand">${ic('file', 26)}<div><b>Nerin Exam365</b><small>${esc(S.cfg.namaSekolah || '')}</small></div></div><nav>${nav}</nav><div class="usr"><div><b>${esc(nm)}</b><small>${S.role === 'admin' ? 'Administrator' : esc(S.user?.kelas || 'Peserta')}</small></div><button class="ib" data-act="logout" title="Keluar">${ic('logout')}</button></div></aside><main class="main"><div class="mtop"><b>${esc(S.cfg.namaSekolah || 'Nerin Exam365')}</b><button class="ib" data-act="logout" title="Keluar">${ic('logout')}</button></div>${previewBadge()}<div id="page"></div></main><nav class="bottom glass">${bn}</nav></div>`;
 }
 const PAGES = {};
 async function go(k) {
@@ -575,7 +575,7 @@ let loginTab = 'peserta';
 function renderLogin(msg) {
   S.page = ''; $('#layer').innerHTML = '';
   const demo = IS_PREVIEW ? `<div class="pvb" style="margin:14px 0 0"><b>Mode Preview &mdash; akun demo</b><br>Peserta kelas X: <b>1001</b> / <b>123456</b><br>Peserta kelas XI: <b>1002</b> / <b>123456</b><br>Pengawas: <b>pengawas01</b> / <b>pengawas123</b><br>Admin: <b>admin@demo.com</b> / <b>admin123</b><br>Token contoh: <b>ABC123</b> (ujian kelas X), <b>XYZ789</b> (ujian kelas XI)</div>` : '';
-  $('#view').innerHTML = `<div class="login"><div class="lc glass"><div class="logo">${ic('file', 28)}</div><h2 style="text-align:center">Ujian Online</h2><p class="mu" style="text-align:center;margin:4px 0 0">${esc(S.cfg.namaSekolah || 'Silakan masuk untuk melanjutkan')}</p>
+  $('#view').innerHTML = `<div class="login"><div class="lc glass"><div class="logo">${ic('file', 28)}</div><h2 style="text-align:center">Nerin Exam365</h2><p class="mu" style="text-align:center;margin:4px 0 0">${esc(S.cfg.namaSekolah || 'Silakan masuk untuk melanjutkan')}</p>
   <div class="seg"><button data-act="ltab" data-t="peserta" class="${loginTab === 'peserta' ? 'on' : ''}">Peserta</button><button data-act="ltab" data-t="pengawas" class="${loginTab === 'pengawas' ? 'on' : ''}">Pengawas</button><button data-act="ltab" data-t="admin" class="${loginTab === 'admin' ? 'on' : ''}">Admin</button></div>
   <form id="lf" class="form">${loginTab !== 'admin' ? `<label>${loginTab === 'peserta' ? 'NIS / Username' : 'Username pengawas'}<input class="inp" name="u" autocomplete="username" required></label>` : '<label>Email<input class="inp" type="email" name="u" autocomplete="username" required></label>'}<label>Password<input class="inp" type="password" name="p" autocomplete="current-password" required></label><div class="err" id="le">${esc(msg || '')}</div><button class="btn pri" style="justify-content:center">Masuk</button></form>${demo}</div></div>`;
   $('#lf').onsubmit = async e => {
@@ -1242,7 +1242,7 @@ const distinct = (arr, fn) => [...new Set(arr.map(fn).filter(Boolean))].sort(byN
 
 /* ================= VIEWS ================= */
 const NAV = {
-  admin: [['dash', 'Dashboard', 'home'], ['master', 'Data Master', 'layers'], ['jadwal', 'Jadwal Ujian', 'calendar'], ['rekap', 'Rekap BAP', 'file'], ['set', 'Pengaturan', 'sliders'], ['__ujian', 'Ujian Online', 'file']],
+  admin: [['dash', 'Dashboard', 'home'], ['master', 'Data Master', 'layers'], ['jadwal', 'Jadwal Ujian', 'calendar'], ['rekap', 'Rekap BAP', 'file'], ['set', 'Pengaturan', 'sliders'], ['__ujian', 'Nerin Exam365', 'file']],
   pengawas: [['home', 'Tugas Saya', 'home'], ['bap', 'Isi BAP', 'plus'], ['riwayat', 'Riwayat BAP', 'file'], ['akun', 'Akun', 'user']]
 };
 const VIEWS = {};
@@ -1437,7 +1437,7 @@ async function importSiswa(text) {
   items.forEach((it, i) => upsertLocal('siswa', { ...it.data, id: ids[i] }));
   let kartu = [];
   try { kartu = (await BR.buatPeserta([...m.values()])).kartu; }
-  catch (e) { throw new Error('Data siswa tersimpan, tetapi akun peserta ujian online gagal dibuat: ' + (e.message || e)); }
+  catch (e) { throw new Error('Data siswa tersimpan, tetapi akun peserta Nerin Exam365 gagal dibuat: ' + (e.message || e)); }
   return { baru: items.filter(i => !i.id).length, ubah: items.filter(i => i.id).length, bad, kartu };
 }
 async function importPengawas(text) {
@@ -1479,7 +1479,7 @@ async function importRuang(text) {
   return { baru, ubah, bad };
 }
 const IMP = {
-  siswa: { title: 'Impor Data Peserta', fn: importSiswa, help: 'Satu siswa per baris dengan format <b>NIS;Nama;Kelas</b> (pemisah titik koma, koma, atau tab). Kelas baru dibuat otomatis, dan NIS yang sudah ada diperbarui. Impor ini <b>sekaligus membuat akun peserta ujian online</b> (password acak untuk siswa baru; file kartu login diunduh otomatis).', ph: '1001;Ahmad Fauzi;X-1\n1002;Siti Rahma;X-2' },
+  siswa: { title: 'Impor Data Peserta', fn: importSiswa, help: 'Satu siswa per baris dengan format <b>NIS;Nama;Kelas</b> (pemisah titik koma, koma, atau tab). Kelas baru dibuat otomatis, dan NIS yang sudah ada diperbarui. Impor ini <b>sekaligus membuat akun peserta Nerin Exam365</b> (password acak untuk siswa baru; file kartu login diunduh otomatis).', ph: '1001;Ahmad Fauzi;X-1\n1002;Siti Rahma;X-2' },
   pengawas: { title: 'Impor Data Pengawas', fn: importPengawas, help: 'Satu pengawas per baris dengan format <b>Nama;NIP;Username;Password</b> (NIP boleh kosong). Gunakan titik koma atau tab sebagai pemisah, bukan koma, karena gelar memakai koma. Username huruf kecil/angka/titik/strip, password minimal 6 karakter. Pengawas yang sudah ada diperbarui (password hanya berubah bila diisi).', ph: 'Budi Santoso, S.Pd.;198001012005011001;budi;rahasia01\nSiti Aminah, M.Pd.;;siti;rahasia02' },
   ruang: { title: 'Impor Data Ruang', fn: importRuang, help: 'Satu ruang per baris dengan format <b>Nama ruang;Kelas bawaan</b>. Kelas bawaan opsional, pisahkan dengan | (mis. X-1|X-2) dan harus sudah ada di data kelas. Ruang yang sudah ada diperbarui.', ph: 'Ruang 01;X-1|X-2\nRuang 02;X-3' }
 };
@@ -1515,7 +1515,7 @@ function jadwalList() {
     const j = list[0];
     if (j.tanggal !== cur) { cur = j.tanggal; h += `<h3 class="sec">${esc(hariTgl(cur))}</h3>`; }
     const nf = list.filter(x => isFin(bm, x)).length, nd = list.filter(x => bm[x.id] && bm[x.id].status === 'draf').length;
-    h += `<div class="card"><div class="li col"><div class="lm"><b>${esc(j.mapelNama)}</b><small>${esc(jamLbl(j))}${j.jamKe ? ' · ' : ''}${esc(j.jamMulai)}–${esc(j.jamSelesai)} WIB</small><small>${list.length} ruang · ${nf} final · ${nd} draf · ${list.length - nf - nd} belum${j.ujianJudul ? ' · Ujian online: ' + esc(j.ujianJudul) : ''}</small></div><div class="acts"><button class="ib" data-act="jedit" data-k="${esc(k)}" aria-label="Ubah">${ic('edit', 18)}</button><button class="ib bad" data-act="jdel" data-k="${esc(k)}" aria-label="Hapus">${ic('trash', 18)}</button></div></div>
+    h += `<div class="card"><div class="li col"><div class="lm"><b>${esc(j.mapelNama)}</b><small>${esc(jamLbl(j))}${j.jamKe ? ' · ' : ''}${esc(j.jamMulai)}–${esc(j.jamSelesai)} WIB</small><small>${list.length} ruang · ${nf} final · ${nd} draf · ${list.length - nf - nd} belum${j.ujianJudul ? ' · Nerin Exam365: ' + esc(j.ujianJudul) : ''}</small></div><div class="acts"><button class="ib" data-act="jedit" data-k="${esc(k)}" aria-label="Ubah">${ic('edit', 18)}</button><button class="ib bad" data-act="jdel" data-k="${esc(k)}" aria-label="Hapus">${ic('trash', 18)}</button></div></div>
     <div class="chips" style="margin:10px 0 0">${list.map(x => `<span class="chip ${isFin(bm, x) ? 'ok' : bm[x.id] ? 'warn' : ''}">${esc(x.ruangNama)}${x.diambilNama ? ' · ' + esc(x.diambilNama) : ''}</span>`).join('')}</div></div>`;
   }
   return h;
@@ -1531,7 +1531,7 @@ async function openJadwal(key) {
     ${sel('Jam ke-', 'jamKe', JAM_OPTS, r.jamKe ? String(r.jamKe) : '', { req: 1 })}
     ${fld('Jam mulai', 'jamMulai', r.jamMulai, { type: 'time', req: 1 })}${fld('Jam selesai', 'jamSelesai', r.jamSelesai, { type: 'time', req: 1 })}
     ${sel('Mata pelajaran', 'mapelId', S.data.mapel.map(x => [x.id, x.nama]), r.mapelId, { req: 1, cls: 'full' })}
-    ${sel('Tautkan ke ujian online (opsional; kehadiran terisi otomatis)', 'ujianId', ujList.map(x => [x.id, x.judul + ' (' + (!x.tingkat || x.tingkat === 'SEMUA' ? 'semua tingkat' : 'kelas ' + x.tingkat) + ')']), r.ujianId || '', { cls: 'full', blank: '— Tidak ditautkan —' })}</div>
+    ${sel('Tautkan ke Nerin Exam365 (opsional; kehadiran terisi otomatis)', 'ujianId', ujList.map(x => [x.id, x.judul + ' (' + (!x.tingkat || x.tingkat === 'SEMUA' ? 'semua tingkat' : 'kelas ' + x.tingkat) + ')']), r.ujianId || '', { cls: 'full', blank: '— Tidak ditautkan —' })}</div>
     <div class="fld"><span>Ruang yang mengikuti mata pelajaran ini (boleh lebih dari satu)</span>
     <div class="li" style="margin-bottom:8px;gap:8px;flex-wrap:wrap"><small id="rcount">${cur.size} ruang dipilih</small><div class="acts"><button type="button" class="btn ghost" style="padding:6px 12px" data-act="chkall" data-v="1">Pilih semua</button><button type="button" class="btn" style="padding:6px 12px" data-act="chkall" data-v="0">Kosongkan</button></div></div>
     <div class="chk" id="ruangChk">${S.data.ruang.map(x => `<label class="chkit"><input type="checkbox" name="rg" value="${esc(x.id)}" data-ch="rcnt" ${cur.has(x.id) ? 'checked' : ''}>${esc(x.nama)}</label>`).join('')}</div></div>
@@ -1614,7 +1614,7 @@ VIEWS.set = () => {
     ${fld('Nama kepala sekolah', 'kepsek', s.kepsek)}${fld('NIP kepala sekolah', 'nipKepsek', s.nipKepsek)}</div>
     <div class="fld"><span>Logo sekolah (opsional)</span><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><div class="logoprev" id="logoPrev">${logo ? `<img src="${esc(logo)}" alt="Logo">` : 'Belum ada'}</div><input type="file" accept="image/*" data-ch="logo" style="max-width:220px"><button type="button" class="btn" data-act="logodel">Hapus logo</button></div></div>
     <button class="btn pri" type="submit">Simpan Pengaturan</button></form>
-    <div class="card"><div class="li" style="flex-wrap:wrap"><div class="lm"><b>${esc(S.user.nama)}</b><small>Administrator</small></div><div class="acts" style="gap:8px"><button class="btn ghost" data-act="go" data-v="__ujian">Buka Ujian Online</button><button class="btn" data-act="logout">${ic('logout', 18)}Keluar</button></div></div></div>`;
+    <div class="card"><div class="li" style="flex-wrap:wrap"><div class="lm"><b>${esc(S.user.nama)}</b><small>Administrator</small></div><div class="acts" style="gap:8px"><button class="btn ghost" data-act="go" data-v="__ujian">Buka Nerin Exam365</button><button class="btn" data-act="logout">${ic('logout', 18)}Keluar</button></div></div></div>`;
 };
 
 /* ---- Ruang: beranda, riwayat, akun ---- */
@@ -1739,11 +1739,11 @@ async function applyUjian(F, rows) {
     let sesi;
     try { sesi = await BR.getSesi(F.ujianId, pidOf(r.nis)); } catch (e) { return; }
     const m = F.kehadiranMap[r.siswaId]; if (!m) return;
-    if (!sesi) { m.status = 'A'; m.ket = 'Belum memulai ujian online (otomatis)'; }
+    if (!sesi) { m.status = 'A'; m.ket = 'Belum memulai Nerin Exam365 (otomatis)'; }
     else if (sesi.status === 'terkunci') notes.push(`${r.nama} (${r.kelas}) terkunci karena ${sesi.pelanggaran || 0} pelanggaran`);
     else if (sesi.pelanggaran > 0) notes.push(`${r.nama} (${r.kelas}) tercatat ${sesi.pelanggaran} pelanggaran`);
   }));
-  if (notes.length) F.catatan = (F.catatan ? F.catatan + '\n' : '') + 'Catatan ujian online: ' + notes.join('; ') + '.';
+  if (notes.length) F.catatan = (F.catatan ? F.catatan + '\n' : '') + 'Catatan Nerin Exam365: ' + notes.join('; ') + '.';
 }
 async function setKelas(names) {
   const F = S.form;
@@ -1788,7 +1788,7 @@ function pengOpts(selId, selNama, exclude) {
 function viewBapForm() {
   const F = S.form, ro = F.status === 'final', dis = ro ? 'disabled' : '';
   return head('Isi BAP', `${F.mapelNama} · ${fmtTgl(F.tanggal)}`, `<button class="btn" data-act="bback">${ic('back', 18)}Kembali</button>`) +
-    (ro ? '<div class="note ok">BAP ini sudah final dan terkunci. Hubungi admin jika perlu diubah.</div>' : '<div class="note info">' + (F.ujianId ? 'Kehadiran diisi otomatis dari ujian online: siswa yang belum memulai ujian ditandai Alpa. Periksa dan ubah bila perlu. ' : 'Semua siswa otomatis berstatus Hadir. ') + 'Status: S = Sakit, I = Izin, A = Alpa.</div>') +
+    (ro ? '<div class="note ok">BAP ini sudah final dan terkunci. Hubungi admin jika perlu diubah.</div>' : '<div class="note info">' + (F.ujianId ? 'Kehadiran diisi otomatis dari Nerin Exam365: siswa yang belum memulai ujian ditandai Alpa. Periksa dan ubah bila perlu. ' : 'Semua siswa otomatis berstatus Hadir. ') + 'Status: S = Sakit, I = Izin, A = Alpa.</div>') +
     (!S.data.pengawas.length && !ro ? '<div class="err">Daftar pengawas masih kosong. Hubungi admin untuk menambahkannya.</div>' : '') +
     `<div class="card"><div class="g2">
     ${fld('Ruang ujian', 'ruangNama', F.ruangNama, { attr: 'disabled' })}

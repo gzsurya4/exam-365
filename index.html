@@ -1775,7 +1775,7 @@ async function hashPw(pw, salt) {
   return b64(new Uint8Array(bits));
 }
 const newSalt = () => (IS_PREVIEW ? 'preview' : b64(crypto.getRandomValues(new Uint8Array(16))));
-const USER_RE = /^[a-z0-9._-]{3,30}$/;
+const USER_RE = /^[a-z0-9._-]{3,60}$/;
 
 async function loginPengawas(username, pw) {
   const id = String(username || '').trim().toLowerCase();
@@ -2047,14 +2047,32 @@ function deleteMaster(id) {
 }
 
 /* ---- Impor ---- */
-const splitLines = text => text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+// Parser CSV/TSV sadar tanda kutip: pemisah ; , atau tab (dideteksi dari baris pertama), kutip ganda boleh memuat koma & baris baru.
+const splitLines = text => {
+  text = String(text || '').replace(/^\uFEFF/, '');
+  const first = text.split(/\r?\n/).find(l => l.trim()) || '';
+  const outside = first.replace(/"[^"]*"/g, '');
+  const d = outside.includes('\t') ? '\t' : outside.includes(';') ? ';' : ',';
+  const rows = []; let row = [], f = '', q = false;
+  const endRow = () => { row.push(f.trim()); f = ''; if (row.some(x => x)) rows.push(row); row = []; };
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"' && !f.trim()) { q = true; f = ''; }
+    else if (c === d) { row.push(f.trim()); f = ''; }
+    else if (c === '\n') endRow();
+    else if (c !== '\r') f += c;
+  }
+  endRow();
+  return rows;
+};
 const pidOf = n => String(n ?? '').trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
 const csvl = a => a.map(v => { v = String(v ?? ''); return /[",;\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(',');
 const dl = (name, text) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\uFEFF' + text], { type: 'text/csv;charset=utf-8' })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); };
 async function importSiswa(text) {
   const rows = []; let bad = 0;
   splitLines(text).forEach((l, i) => {
-    const p = l.split(/[;\t,]/).map(x => x.trim());
+    const p = l;
     if (i === 0 && /^(nis|nomor|no\.?\s*peserta)/i.test(p[0])) return;
     if (p.length < 3 || !p[0] || !p[1] || !p[2]) { bad++; return; }
     rows.push({ nis: p[0], nama: p[1], kelas: p[2] });
@@ -2080,7 +2098,7 @@ async function importSiswa(text) {
 async function importPengawas(text) {
   let baru = 0, ubah = 0, bad = 0;
   for (const [i, l] of splitLines(text).entries()) {
-    const p = l.split(/[;\t]/).map(x => x.trim());
+    const p = l;
     if (i === 0 && /^nama\b/i.test(p[0])) continue;
     const ex = S.data.pengawas.find(r => r.nama.toLowerCase() === (p[0] || '').toLowerCase());
     const username = ex && ex.username ? ex.username : String(p[2] || '').toLowerCase();
@@ -2103,7 +2121,7 @@ async function importRuang(text) {
   let baru = 0, ubah = 0, bad = 0;
   const kn = new Set(S.data.kelas.map(k => k.nama));
   for (const [i, l] of splitLines(text).entries()) {
-    const p = l.split(/[;\t]/).map(x => x.trim());
+    const p = l;
     if (i === 0 && /^nama\b/i.test(p[0])) continue;
     if (!p[0]) { bad++; continue; }
     const ex = S.data.ruang.find(r => r.nama.toLowerCase() === p[0].toLowerCase());

@@ -1,0 +1,207 @@
+# Panduan Aplikasi Ujian Online (Firebase + Microsoft Forms)
+
+Aplikasi ini menampilkan soal dari Microsoft Forms di dalam halaman yang dilindungi token, jadwal, dan pengawasan anti curang. Login peserta, jadwal, sesi, log pelanggaran, dan nilai disimpan di Firebase Firestore.
+
+## 1. Menyiapkan Microsoft Forms
+
+1. Buat formulir di forms.office.com (pilih **Kuis** agar penilaian otomatis).
+2. Tambahkan pertanyaan pertama **NIS** (teks pendek, wajib diisi). Ini dipakai untuk mencocokkan nilai dengan peserta.
+3. Di **Pengaturan** formulir:
+   - Pilih **Siapa saja dapat merespons** (sesuai keputusan Anda, link terbuka).
+   - Aktifkan **Acak urutan pertanyaan** dan acak pilihan jawaban di setiap soal.
+   - Matikan **Tampilkan hasil setelah pengiriman** dan jangan perlihatkan jawaban benar.
+4. Klik **Bagikan** lalu tab **Sematkan** dan salin kodenya (atau link-nya). Tempel ke kolom "Link / kode embed" saat membuat ujian di aplikasi. Aplikasi mengambil link dari kode itu dan menambahkan `embed=true` otomatis.
+5. Setelah ujian selesai, matikan **Terima respons** di Forms agar tidak ada kiriman susulan.
+
+## 2. Membuat Project Firebase
+
+1. Buka console.firebase.google.com, klik **Add project**, ikuti langkahnya.
+2. **Firestore Database**: menu *Build > Firestore Database > Create database*, pilih lokasi terdekat (misalnya `asia-southeast2` Jakarta), mulai dalam mode produksi.
+3. **Authentication**: menu *Build > Authentication > Get started*, aktifkan provider **Email/Password**.
+4. Daftarkan akun admin pertama: tab *Users > Add user*, isi email dan password.
+5. **Matikan pendaftaran mandiri**: *Authentication > Settings > User actions*, nonaktifkan **Enable create (sign-up)**. Ini penting agar orang lain tidak bisa membuat akun admin lewat API.
+6. **Security Rules**: *Firestore Database > Rules*, hapus isi lama, tempel seluruh isi file `firestore.rules`, lalu **Publish**.
+7. Ambil konfigurasi web: *Project settings (ikon roda gigi) > Your apps > ikon </> (Web)*, daftarkan aplikasi, lalu salin objek `firebaseConfig`.
+8. Tambahkan domain tempat aplikasi dipasang: *Authentication > Settings > Authorized domains* (misalnya domain Blogger atau hosting Anda).
+
+## 3. Mengisi konfigurasi dan beralih ke mode produksi
+
+Di bagian atas kode (`<script type="module">`):
+
+```javascript
+const IS_PREVIEW = false; // false = produksi, tanpa data dummy, langsung ke Firestore
+
+const firebaseConfig = {
+  apiKey: "...",
+  authDomain: "...",
+  projectId: "...",
+  storageBucket: "...",
+  messagingSenderId: "...",
+  appId: "..."
+};
+```
+
+Saat `IS_PREVIEW = false`, semua data dummy, banner preview, dan akun demo hilang, dan tidak ada data aplikasi yang disimpan di localStorage/sessionStorage.
+
+## 4. Memasang aplikasi
+
+**Blogger**: *Tema > Edit HTML* tidak diperlukan. Buat **Halaman** baru, pindah ke mode HTML, tempel seluruh isi `index.html`, lalu terbitkan. Aplikasi otomatis menutupi seluruh layar.
+Atau tambahkan widget **HTML/JavaScript** dan tempel kodenya.
+
+**Hosting lain** (Vercel, Netlify, GitHub Pages, Firebase Hosting): unggah `index.html` apa adanya. Wajib memakai **HTTPS** karena aplikasi memakai fitur keamanan browser (hash password PBKDF2 dan layar penuh).
+
+## 5. Alur penggunaan
+
+**Admin (login dengan email Firebase)**
+1. **Pengaturan**: isi nama sekolah, batas pelanggaran (default 3), layar penuh, tata tertib.
+2. **Data Peserta**: tambah satu per satu atau **Impor CSV** (kolom `nis,nama,kelas,password`). Password yang dikosongkan dibuat acak, dan file *kartu-login-peserta.csv* otomatis terunduh untuk dibagikan.
+3. **Data Ujian**: isi judul, mapel, **tingkat peserta (Kelas X / XI / XII / Semua tingkat)**, link Forms, jadwal, durasi. Token dibuat otomatis dan tampil di kartu ujian (bisa disalin atau dibuat ulang). Buat satu ujian per kelas dan per sesi, masing-masing dengan token sendiri.
+4. Saat ujian: bagikan **token** kepada peserta hanya ketika ujian dimulai. Pantau di **Pantauan Ujian** (tekan *Segarkan*), buka kunci peserta yang terkunci, dan lihat **Log Pelanggaran**.
+5. Setelah ujian: di Forms pilih **Buka di Excel**, unduh file .xlsx, lalu di **Rekap Nilai** klik **Impor Excel/CSV**. Pilih kolom NIS dan kolom skor (*Total points*), pilih aturan duplikat, lalu impor. Nilai bisa diekspor sebagai CSV.
+
+**Pengawas**: lihat bagian 10 (Modul BAP).
+
+**Peserta**
+1. Login dengan NIS dan password.
+2. Menu **Kerjakan Ujian**, pilih ujian, masukkan token, baca tata tertib, lalu **Mulai mengerjakan** (layar penuh aktif).
+3. Setelah mengirim jawaban di formulir, tekan **Saya sudah mengirim jawaban**.
+4. Nilai terlihat di **Riwayat & Nilai** setelah admin mengimpornya (bisa disembunyikan lewat Pengaturan).
+
+## 6. Fitur anti curang
+
+- Token ujian, hanya valid dalam jadwal. Link Forms tidak tersimpan di data ujian yang terbaca peserta dan baru bisa diambil setelah token benar.
+- Satu sesi login per peserta. Login di perangkat lain mengeluarkan sesi sebelumnya.
+- Timer dari waktu server, tidak bisa diulang dengan reload.
+- Wajib layar penuh, deteksi pindah tab/jendela, blokir klik kanan, salin/tempel, dan pintasan alat pengembang.
+- Setiap pelanggaran dicatat. Pada pelanggaran ke-3 (atau sesuai pengaturan) ujian terkunci sampai admin membukanya.
+
+## 7. Batasan yang perlu diketahui
+
+- Aplikasi tidak bisa melihat isi dalam Forms. Siswa yang mendapat link Forms dari luar aplikasi tidak bisa dicegah. Karena itu rahasiakan token dan tutup form setelah ujian.
+- Karena link terbuka, pengiriman ganda dari NIS yang sama mungkin terjadi. Pakai opsi duplikat saat impor nilai.
+- Pembatasan browser tidak bisa menghentikan HP kedua, diskusi langsung, atau pengguna yang sangat paham teknis. Gunakan sebagai penghalang dan bukti, bukan jaminan mutlak.
+- Pada HP (terutama iPhone) layar penuh tidak selalu tersedia, jadi pengawasan layar penuh dilewati otomatis di perangkat itu.
+- Login peserta memakai data di Firestore (sesuai desain tanpa server). Gunakan password yang acak dan tidak mudah ditebak. Jangan memakai password seragam seperti tanggal lahir.
+- Fitur pasang sebagai aplikasi (PWA) berbasis satu file memiliki batasan browser; aplikasi tetap berjalan normal sebagai halaman web.
+
+## 8. Filter per tingkat (hemat kuota)
+
+- Tingkat siswa dibaca dari **awal nama kelas** di Data Peserta: `X A`, `XI-2`, `XII IPS 1` menjadi X, XI, XII. Kelas yang tidak diawali X/XI/XII ditandai merah "tingkat?" dan hanya melihat ujian bertingkat "Semua tingkat". Perbaiki penulisan kelasnya.
+- Siswa hanya membaca ujian yang **aktif** dan sesuai tingkatnya, tidak peduli berapa banyak ujian lama di database. Daftar ujian juga disimpan sementara 2 menit di perangkat siswa, jadi pindah menu tidak menambah bacaan.
+- Pantauan Ujian dan Rekap Nilai hanya menghitung peserta dari tingkat ujian yang dipilih.
+- Setelah nilai selesai dipublikasikan, **hilangkan centang "Ujian aktif"** pada ujian lama. Ujian nonaktif tidak lagi dibaca siswa dan tidak tampil di Riwayat mereka.
+- Tidak perlu membuat index tambahan di Firestore, dan `firestore.rules` tidak berubah.
+- Ujian yang dibuat sebelum pembaruan ini harus dibuka (**Ubah**) dan disimpan sekali agar tingkatnya tercatat.
+
+## 9. Kuota dan ujian serentak (±1000 siswa)
+
+Firestore paket gratis (Spark) memberi kuota harian sekitar 50.000 baca dan 20.000 tulis per project Firebase (memisahkan kode aplikasi tidak menambah kuota). Aplikasi dirancang hemat: sekitar 10-20 baca dan 3-6 tulis per siswa per ujian, tanpa listener realtime yang boros. Pada hari dengan tiga sesi ujian, hitung ketiganya bersama dan pantau penggunaan di konsol Firebase (tab Usage). Kuota harian direset sekitar tengah malam waktu Pasifik (kira-kira pukul 15.00 WIB); pastikan di dokumentasi Firebase. Jika Anda menjalankan beberapa ujian besar per hari atau sering menekan *Segarkan* di Pantauan (membaca hingga ±1000 dokumen sekali tekan), pertimbangkan paket Blaze (bayar sesuai pemakaian, ada kuota gratis yang sama).
+
+Sebelum hari ujian, lakukan uji coba dengan 100-200 siswa serentak, terutama untuk memastikan Microsoft Forms di tenant Anda tidak membatasi respons yang masuk bersamaan.
+
+## 10. Modul BAP (Berita Acara Pelaksanaan) di dalam aplikasi ini
+
+> Catatan: nama menu dan alur impor pada bagian ini sudah diperbarui di **bagian 12** (menu Nerin dan BAP kini satu, data peserta dan ujian dipakai bersama).
+
+Aplikasi BAP lama sudah digabung ke satu file `index.html` dan satu `firestore.rules`. Semua memakai satu project Firebase, jadi kuota Firestore dihitung bersama.
+
+**Perubahan penting dari versi sebelumnya**
+- **Akun ruang dihapus**, diganti **akun pengawas** (satu akun per guru). Pengawas yang menggantikan teman tetap bisa mengisi BAP karena yang dipilih adalah ruang yang sedang ia awasi, bukan akun ruang.
+- Login punya tiga tab: **Peserta**, **Pengawas**, **Admin**. Admin membuka BAP lewat menu **BAP Ujian**, dan kembali lewat tombol **Ujian Online** di menu BAP.
+- Hash password diganti ke PBKDF2 dengan salt (lebih kuat dari sebelumnya). **Peserta yang dibuat dengan versi lama tidak bisa login**; impor ulang CSV peserta dengan kolom password, atau ubah passwordnya satu per satu. Aplikasi ujian dan BAP sebaiknya dipasang bersamaan dengan data peserta baru.
+- Koleksi baru di Firestore: `akunPengawas`. Koleksi `akunRuang` tidak lagi dipakai dan boleh dihapus. Tempel ulang seluruh `firestore.rules` lalu **Publish**.
+
+**Alur admin (menu BAP Ujian)**
+1. **Data Master**: mapel, ruang (nama ruang dan kelas bawaan), kelas, siswa, dan pengawas. Setiap pengawas punya username dan password; impor pengawas: `Nama;NIP;Username;Password`.
+2. **Impor siswa** (`NIS;Nama;Kelas`) sekaligus **membuat akun peserta ujian online**. Password acak dibuat otomatis dan file *kartu-login-peserta.csv* terunduh untuk dibagikan. Peserta yang sudah ada tidak diubah passwordnya.
+3. **Jadwal Ujian**: tentukan tanggal, jam ke-, mapel, ruang, dan (opsional) **Ujian Online** yang terkait. Pengawas tidak ditentukan di jadwal; pengawas memilih sendiri saat bertugas.
+4. **Rekap BAP**: lihat, buka kunci, hapus, dan cetak PDF dengan tanda tangan.
+
+**Alur pengawas**
+1. Login tab **Pengawas**, menu **Isi BAP**.
+2. Pilih tanggal dan jam ke-, lalu ketuk **Saya mengawas ini** pada ruang yang diawasi. Ruang yang sudah diambil pengawas lain tidak bisa diambil, dan bisa dilepas bila salah pilih.
+3. Kehadiran terisi otomatis dari ujian online: siswa yang belum pernah memulai ujian ditandai **Alpa**, siswa yang terkunci atau melanggar tercatat di catatan. Pengawas memeriksa dan mengubah S/I/A bila perlu.
+4. Tanda tangan di layar, lalu **Finalkan BAP** atau **Cetak PDF**. Setelah final, BAP terkunci dan hanya admin yang bisa membukanya.
+
+**Catatan keamanan**
+- Karena login pengawas dan peserta memakai data di Firestore (tanpa server), aturan tidak bisa memastikan siapa yang menulis. Aturan hanya memastikan ruang tidak bisa diambil dua orang, BAP hanya ditulis atas nama pengawas yang mengambil ruang itu, dan BAP final tidak bisa diubah pengawas.
+- Data siswa, pengawas, jadwal, dan BAP terbaca publik oleh siapa pun yang tahu alamat project (NIS dan nama dapat terlihat). Jangan menyimpan data sensitif di sana. Jika ini jadi masalah, pertimbangkan Cloud Functions.
+- PDF memakai pustaka jsPDF dari CDN, jadi perangkat yang mencetak harus terhubung internet.
+- Setelah selesai uji coba, pastikan `IS_PREVIEW = false` agar data demo hilang.
+
+## 11. Pembaruan: Nerin Exam365
+
+- **Nama aplikasi** kini *Nerin Exam365* (judul halaman, login, menu, PWA, dan modul BAP).
+- **Login**: ikon mata di kolom password untuk melihat atau menyembunyikan password.
+- **Pengaturan > Identitas sekolah & kop surat**: unggah logo (otomatis dikecilkan), nama sekolah, dua baris kop opsional, alamat, kontak, kota, tahun pelajaran, nama dan NIP kepala sekolah, ukuran kertas A4/F4. Logo tampil di halaman login. Data ini disimpan di dokumen `settings/sekolah` dan **dipakai bersama oleh modul BAP**, jadi cukup diisi sekali. Tombol *Pratinjau kop (PDF)* menunjukkan hasil kop.
+- **Rekap Nilai > PDF**: pilih kelas/rombel, urutan (nama, kelas, nilai tertinggi), dan KKM opsional. Laporan berkop surat berisi tabel nilai, ringkasan (rata-rata, tertinggi, terendah, jumlah tuntas), dan tanda tangan kepala sekolah.
+- **Log Pelanggaran**: filter per ujian, per mapel, per angkatan (X/XI/XII), dan per rombel, lalu **PDF Laporan** berkop dengan rekap per rombel dan per jenis pelanggaran. Tanpa filter ujian atau mapel hanya 300 log terbaru dimuat.
+- **Pantauan Ujian** punya dua tab:
+  - *Pantauan Langsung*: kartu partisipasi, persentase selesai, total pelanggaran, rata-rata durasi, diagram donat status, progres per kelas, dan grafik pelanggaran per kelas.
+  - *Rekap & Grafik*: pilih rentang tanggal dan tingkat, lalu **Muat rekap**. Menampilkan status keseluruhan, peserta per hari, partisipasi per mapel, rata-rata nilai per mapel, tren nilai per hari, pelanggaran per mapel, tabel per ujian, serta ekspor CSV dan PDF berkop. Perkiraan jumlah bacaan Firestore tampil sebelum data dimuat (sekitar satu dokumen per peserta per ujian, dua jika nilai disertakan).
+- **Tampilan** diganti ke gaya soft neumorphism (biru lembut, tombol ungu).
+- PDF memakai pustaka jsPDF dari CDN, jadi perangkat harus terhubung internet saat membuat laporan. `firestore.rules` tidak berubah.
+
+## 12. Pembaruan: Nerin Exam365 dan BAP satu menu, satu data
+
+**Menu admin (sekarang satu aplikasi)**
+- **Data Master**: tab *Mapel, Ruang, Kelas, Daftar Peserta, Pengawas*. Daftar peserta **sama** untuk ujian online dan BAP, jadi **cukup diimpor satu kali**. Kelas baru otomatis masuk ke Data Master saat peserta ditambah atau diimpor.
+- **Data Ujian**: satu formulir berisi judul, mapel (pilih dari Data Master atau ketik baru, otomatis tersimpan), tingkat, **tanggal, jam ke-, jam mulai/selesai**, durasi, **ruang**, link Forms, dan token. Saat disimpan, aplikasi otomatis membuat **jadwal ruang untuk pengawas dan BAP**. Menu *Jadwal Ujian* BAP yang lama tidak diperlukan lagi.
+- **Berita Acara Pelaksanaan**: *Dashboard BAP* dan *Rekap BAP* (tetap seperti sebelumnya).
+- **Pengaturan**: satu halaman untuk identitas sekolah/kop/logo (dipakai PDF nilai dan PDF BAP), pengaturan ujian, dan **Kode Pengawas**.
+
+**Menu pengawas**: Beranda, **Data Ujian** (jadwal ujian + token), Isi BAP, Riwayat BAP, Akun.
+
+**Cara pengawas melihat token**
+1. Admin mengisi **Kode Pengawas** (minimal 6 karakter) di *Pengaturan*, lalu klik *Simpan & terapkan*. Bagikan kode ini ke pengawas secara tertutup.
+2. Pengawas membuka **Data Ujian**, memasukkan kode satu kali (tersimpan di perangkatnya), lalu menekan **Lihat token**. Token tersembunyi otomatis setelah 90 detik.
+3. Token tersimpan di dokumen `tokenView` yang ID-nya diturunkan dari Kode Pengawas, sehingga peserta yang tidak tahu kode tidak bisa menemukannya. Jika kode bocor, ganti di Pengaturan (dokumen lama otomatis dihapus). Dokumen kedaluwarsa 2 jam setelah ujian selesai.
+
+**Peserta: layar penuh dipaksa sejak login**
+- Saat menekan Masuk, aplikasi langsung meminta layar penuh. Jika peserta keluar dari layar penuh kapan saja (selama login), muncul layar penghalang *Layar penuh wajib* sampai ia menekan *Masuk layar penuh*. Saat ujian, keluar layar penuh tetap dihitung pelanggaran.
+- Pengaturan: *Paksa layar penuh sepanjang sesi peserta* (Pengaturan > Pengaturan ujian).
+- Batasan browser: **iPhone Safari tidak mendukung layar penuh** untuk web. Peserta iPhone diminta memasang ke Layar Utama. Aplikasi juga diset `display: fullscreen` agar bila dipasang (PWA) di Android berjalan layar penuh. Web tidak bisa memblokir panel notifikasi Android sepenuhnya; yang bisa dilakukan adalah mewajibkan layar penuh dan mencatat pelanggaran jika peserta berpindah aplikasi/tab. Untuk keamanan tertinggi, gunakan HP ujian yang notifikasinya dimatikan (mode jangan ganggu) atau fitur *app pinning* Android.
+
+**Migrasi dari versi sebelumnya (penting)**
+1. Tempel ulang `firestore.rules` lalu **Publish**.
+2. Data peserta kini di koleksi `siswa` (biodata) dan `akunPeserta` (password). Di **Data Master > Daftar Peserta** klik **Migrasi data lama** untuk menyalin dari koleksi `peserta` lama (password tetap berlaku). Jika belum ada data lama, cukup impor CSV peserta.
+3. Ujian lama tanpa ruang: buka **Data Ujian > Ubah**, pilih jam ke- dan ruang, lalu simpan agar muncul di jadwal BAP.
+4. Jika peserta melihat *Belum ada jadwal ujian*: pastikan nama kelas diawali **X, XI, atau XII** dan ujian sudah disimpan ulang (agar ber-tingkat). Pesan di beranda peserta sekarang menjelaskan jika kelasnya tidak dikenali.
+
+## 13. Pembaruan: anti curang lanjutan, penalti, token berganti otomatis, tema baru
+
+**Sistem penalti (Pengaturan > Pengaturan ujian)**
+- Pelanggaran ke-1: jeda 1 menit, ke-2: jeda 5 menit (dapat diubah), ke-3 (sesuai *batas pelanggaran*): ujian terkunci.
+- Selama jeda, layar ujian tertutup dan peserta melihat **hitung mundur**; waktu ujian tetap berjalan. Waktu jeda disimpan di sesi, jadi memuat ulang halaman tidak menghapusnya.
+- **Tombol Keluar** di layar ujian: peserta yang menekannya (setelah konfirmasi) langsung **terkunci** dan hanya bisa melanjutkan setelah admin menekan *Buka kunci* atau *Reset* di Pantauan Ujian. Di Log Pelanggaran tercatat "Keluar dari ujian (tombol Keluar)".
+
+**Token berganti otomatis**
+- Pengaturan > *Token otomatis berganti setiap (menit)*, bawaan 20. Isi 0 untuk token tetap.
+- Cara kerja tanpa server: sistem membuat satu dokumen akses per slot waktu (maksimal 80 per ujian) yang hanya valid pada jendela waktunya (ditegakkan Firestore Rules). Token lama otomatis ditolak. Toleransi 1 menit di pergantian slot.
+- Admin dan pengawas melihat token berjalan beserta hitung mundur. Peserta yang sudah memulai tidak terpengaruh; token hanya dipakai saat memulai.
+- Mengubah durasi pergantian atau jadwal ujian membuat ulang dokumen akses otomatis (jumlah tulis Firestore kecil, sekitar 12 dokumen per ujian 4 jam).
+- Tempel ulang `firestore.rules` dan Publish. Ujian lama: klik ikon **buat token baru** sekali agar memakai pergantian otomatis (atau simpan ulang pengaturan token).
+
+**Daftar proteksi di layar ujian, dan batasannya (jujur)**
+
+| Fitur | Yang dilakukan aplikasi | Batasan |
+|---|---|---|
+| Anti copy-paste dan drag | Memblokir copy, cut, paste, drag, drop, pilih teks, klik kanan, Ctrl+C/V/X/A/U/S | Di dalam iframe Microsoft Forms (domain lain) browser tidak mengizinkan aplikasi mengontrol isinya |
+| Anti screenshot dan rekam layar | Mendeteksi PrintScreen, Win+Shift+S, Cmd+Shift+3/4/5, cetak (Ctrl+P): layar ujian ditutup sesaat dan dicatat pelanggaran; **watermark nama dan NIS** menutupi layar sehingga foto/tangkapan bisa dilacak | Web tidak bisa memblokir tangkapan/rekam layar bawaan HP atau aplikasi lain (hanya aplikasi native yang bisa). Fungsi ini bersifat pencegah dan pelacak |
+| Anti dual screen | Memakai `screen.isExtended`: ujian tidak bisa dimulai dan layar ditutup bila ada layar kedua, tercatat pelanggaran | Hanya Chrome/Edge di komputer; browser lain tidak menyediakan informasi ini |
+| Deteksi debugging dan emulator | DevTools terbuka (teknik debugger-timing), mode emulasi perangkat, browser otomatis (webdriver), mesin virtual (VirtualBox/VMware/BlueStacks/Genymotion/emulator Android) | Heuristik, bisa dikelabui orang yang ahli dan berpotensi salah deteksi. Bisa dimatikan di Pengaturan bila ada false positive |
+| Dilarang membuka notifikasi | Wajib layar penuh, wajib centang pernyataan *Jangan Ganggu* sebelum mulai, keluar layar penuh / pindah aplikasi / kehilangan fokus tercatat pelanggaran | Panel notifikasi Android tidak selalu memicu event di browser. Saran: aktifkan *Jangan Ganggu* atau *app pinning* di HP ujian |
+| Tombol Keluar | Mengunci sesi sampai direset admin | - |
+
+**Tema tampilan**: gaya *glassmorphism* biru muda (kartu kaca transparan, tombol pil gradasi cyan-biru, bottom nav pil dengan ikon aktif menyala) untuk semua peran, sesuai gambar referensi.
+
+## 14. Pasang aplikasi di layar utama HP (PWA)
+
+Saat pertama kali membuka aplikasi di HP, muncul kartu "Pasang Nerin Exam365" di halaman login.
+- **Android (Chrome):** tombol **Pasang** memunculkan jendela pemasangan bawaan Chrome.
+- **iPhone (Safari):** kartu menampilkan petunjuk Bagikan, lalu Tambah ke Layar Utama (iOS tidak mengizinkan tombol pasang otomatis).
+- Pilihan **Nanti** menyembunyikan kartu 7 hari; **Jangan tampilkan lagi** menyembunyikannya selamanya. Kartu tidak muncul bila aplikasi sudah dipasang atau dibuka dari layar utama.
+
+**File yang harus ikut di-upload ke Vercel (satu folder dengan index.html, di root):**
+`index.html`, `manifest.webmanifest`, `sw.js`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`.
+Tanpa file-file ini kartu tetap tampil, tetapi Chrome tidak menganggap aplikasi dapat dipasang (tombol Pasang tidak muncul). Ikon bawaan bisa diganti dengan logo sekolah (nama file dan ukuran sama).

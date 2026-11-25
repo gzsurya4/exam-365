@@ -488,6 +488,14 @@ html,body{overscroll-behavior:none}
 #app .login{flex-direction:column;gap:0}
 #app .login .lc{margin:auto auto 0}
 #app .login .copyr{margin-top:0;padding-bottom:14px}
+
+#app .usr{align-items:flex-start;gap:8px}
+#app .usr .uinfo{min-width:0;flex:1;display:flex;flex-direction:column;gap:2px}
+#app .usr .uinfo b{word-break:break-all;line-height:1.25;font-size:13px}
+#app .usr .uinfo .litebtn{margin:8px 0 0;align-self:flex-start}
+#app .ib[data-act=logout]{background:#FDE8EC;color:#E5334F;border:1px solid #F8C5CE;border-radius:12px;flex:none}
+#app .ib[data-act=logout]:hover,#app .ib[data-act=logout]:active{background:#E5334F;color:#fff}
+#app .ib[data-act=logout] svg{stroke:currentColor}
 </style>
 </head>
 <body>
@@ -773,7 +781,7 @@ function renderShell() {
   const bn = menus.filter(m => m.mob).map(m => `<button class="bnav ${menuOn(m, S.page) ? 'on' : ''}" data-act="nav" data-k="${m.k}">${ic(m.i, 20)}<span>${esc(m.s || m.t)}</span></button>`).join('');
   const nm = S.role === 'admin' ? (S.user?.email || 'Admin') : (S.user?.nama || '');
   const sub = S.role === 'admin' ? 'Administrator' : S.role === 'pengawas' ? 'Pengawas' : esc(S.user?.kelas || 'Peserta');
-  $('#view').innerHTML = `<div class="shell"><aside class="side glass"><div class="brand">${brandIc(26)}<div><b>Nerin Exam365</b><small>${esc(S.cfg.namaSekolah || '')}</small></div></div><nav>${nav}</nav><div class="usr"><div><b>${esc(nm)}</b><small>${sub}</small></div>${liteBtn()}<button class="ib" data-act="logout" title="Keluar">${ic('logout')}</button></div></aside><main class="main"><div class="mtop"><b>${esc(S.cfg.namaSekolah || 'Nerin Exam365')}</b>${liteBtn()}<button class="ib" data-act="logout" title="Keluar">${ic('logout')}</button></div>${previewBadge()}<div id="page"></div><div class="copyr">&copy; Copyright Tim IT Nerin 2026</div></main><nav class="bottom glass">${bn}</nav></div>`;
+  $('#view').innerHTML = `<div class="shell"><aside class="side glass"><div class="brand">${brandIc(26)}<div><b>Nerin Exam365</b><small>${esc(S.cfg.namaSekolah || '')}</small></div></div><nav>${nav}</nav><div class="usr"><div class="uinfo"><b>${esc(nm)}</b><small>${sub}</small>${liteBtn()}</div><button class="ib" data-act="logout" title="Keluar">${ic('logout')}</button></div></aside><main class="main"><div class="mtop"><b>${esc(S.cfg.namaSekolah || 'Nerin Exam365')}</b>${liteBtn()}<button class="ib" data-act="logout" title="Keluar">${ic('logout')}</button></div>${previewBadge()}<div id="page"></div><div class="copyr">&copy; Copyright Tim IT Nerin 2026</div></main><nav class="bottom glass">${bn}</nav></div>`;
 }
 function markNav(k) { S.page = k; document.querySelectorAll('#view button.nav, #view button.bnav').forEach(b => b.classList.toggle('on', b.classList.contains('nav') ? b.dataset.k === k : menuOn({ k: b.dataset.k }, k))); }
 const PAGES = {};

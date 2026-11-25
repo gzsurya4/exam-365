@@ -1444,9 +1444,10 @@ const tglID = (d = new Date()) => d.toLocaleDateString('id-ID', { day: 'numeric'
 const MG = 15;
 function pdfKop(doc) {
   const st = S.sek || {}, W = doc.internal.pageSize.getWidth(); let y = 14;
-  if (st.logo) { try { doc.addImage(st.logo, /^data:image\/jpe?g/.test(st.logo) ? 'JPEG' : 'PNG', MG, y - 2, 23, 23); } catch (e) { /* logo diabaikan */ } }
+  const lg = (img, x) => { if (img) { try { doc.addImage(img, /^data:image\/jpe?g/.test(img) ? 'JPEG' : 'PNG', x, y - 2, 23, 23); } catch (e) { /* logo diabaikan */ } } };
+  lg(st.logo, MG); lg(st.logo2, W - MG - 23);
   doc.setFont('times', 'normal'); doc.setFontSize(11); const cx = W / 2; let ty = y + 2;
-  [st.kop1, st.kop2].filter(Boolean).forEach(t => { doc.text(String(t).toUpperCase(), cx, ty, { align: 'center' }); ty += 5; });
+  [st.kop1, st.kop2, st.kop3].filter(Boolean).forEach(t => { doc.text(String(t).toUpperCase(), cx, ty, { align: 'center' }); ty += 5; });
   doc.setFont('times', 'bold'); doc.setFontSize(15); doc.text(String(st.nama || 'NAMA SEKOLAH').toUpperCase(), cx, ty + 1, { align: 'center' }); ty += 6;
   doc.setFont('times', 'normal'); doc.setFontSize(9.5);
   const al = doc.splitTextToSize([st.alamat, st.kontak].filter(Boolean).join('\n') || '', W - 2 * MG - 52); doc.text(al, cx, ty, { align: 'center' }); ty += al.length * 4.2;
@@ -1614,8 +1615,10 @@ PAGES.setting = async () => {
   try { await kodePengawas(); } catch { }
   const c = S.cfg, k = S.sek || {}; S.logoTmp = null; const v = x => esc(k[x] || '');
   $('#page').innerHTML = `<div class="ph"><h2>Pengaturan</h2></div>
-  <div class="card" style="max-width:780px"><h3 class="sec2">Identitas sekolah &amp; kop surat</h3><form id="kf" class="form"><div class="row wrap gap"><div class="lgo" id="lgp">${lgoHtml(k.logo)}</div><div class="form" style="gap:8px"><input type="file" id="lgf" accept="image/*"><div class="row"><button type="button" class="btn sm" data-act="lgDel">Hapus logo</button></div><small class="mu">Logo tampil di halaman login dan kop PDF.</small></div></div>
+  <div class="card" style="max-width:780px"><h3 class="sec2">Identitas sekolah &amp; kop surat</h3><form id="kf" class="form"><div class="row wrap gap"><div class="lgo" id="lgp">${lgoHtml(k.logo)}</div><div class="form" style="gap:8px"><input type="file" id="lgf" accept="image/*"><div class="row"><button type="button" class="btn sm" data-act="lgDel">Hapus logo</button></div><small class="mu">Logo kiri: tampil di halaman login dan kop PDF.</small></div></div>
+  <div class="row wrap gap"><div class="lgo" id="lgp2">${lgoHtml(k.logo2)}</div><div class="form" style="gap:8px"><input type="file" id="lgf2" accept="image/*"><div class="row"><button type="button" class="btn sm" data-act="lgDel2">Hapus logo kanan</button></div><small class="mu">Logo kanan (opsional): tampil di sisi kanan kop PDF. Kosongkan bila hanya memakai satu logo.</small></div></div>
   <label>Nama sekolah<input class="inp" name="nama" required value="${v('nama')}"></label><div class="two"><label>Kop baris 1 (opsional)<input class="inp" name="kop1" placeholder="PEMERINTAH PROVINSI ..." value="${v('kop1')}"></label><label>Kop baris 2 (opsional)<input class="inp" name="kop2" placeholder="DINAS PENDIDIKAN" value="${v('kop2')}"></label></div>
+  <label>Kop baris 3 (opsional, tampil di bawah baris 2 dan di atas nama sekolah)<input class="inp" name="kop3" placeholder="CABANG DINAS PENDIDIKAN WILAYAH X" value="${v('kop3')}"></label>
   <label>Alamat<textarea class="inp" name="alamat" rows="2">${v('alamat')}</textarea></label><label>Kontak (telepon, email, situs)<input class="inp" name="kontak" value="${v('kontak')}"></label>
   <div class="two"><label>Kota (untuk tanda tangan)<input class="inp" name="kota" value="${v('kota')}"></label><label>Tahun pelajaran<input class="inp" name="tahunAjaran" placeholder="2026/2027" value="${v('tahunAjaran')}"></label></div>
   <div class="two"><label>Nama kepala sekolah<input class="inp" name="kepsek" value="${v('kepsek')}"></label><label>NIP kepala sekolah<input class="inp" name="nipKepsek" value="${v('nipKepsek')}"></label></div>
@@ -1626,9 +1629,10 @@ PAGES.setting = async () => {
   <div class="two"><label>Penalti pelanggaran ke-1 (menit jeda)<input class="inp" type="number" name="p1" min="0" max="60" required value="${c.penalti1}"></label><label>Penalti pelanggaran ke-2 (menit jeda)<input class="inp" type="number" name="p2" min="0" max="60" required value="${c.penalti2}"></label></div><p class="mu" style="margin:-4px 0 0;font-size:12.5px">Selama jeda, layar ujian tertutup dan peserta melihat hitung mundur (waktu ujian tetap berjalan). Pelanggaran ke-batas di atas langsung mengunci ujian.</p>
   <label>Token otomatis berganti setiap (menit). Isi 0 untuk token tetap<input class="inp" type="number" name="tr" min="0" max="240" required value="${c.tokenRotasi}"></label>
   <label class="ck"><input type="checkbox" name="ad" ${c.antiDual !== false ? 'checked' : ''}> Deteksi layar ganda (Chrome / Edge di komputer)</label><label class="ck"><input type="checkbox" name="ab" ${c.antiDebug !== false ? 'checked' : ''}> Deteksi alat pengembang (DevTools) dan emulator / mesin virtual</label><label class="ck"><input type="checkbox" name="wm" ${c.watermark !== false ? 'checked' : ''}> Watermark nama dan NIS peserta di atas layar ujian</label><label class="ck"><input type="checkbox" name="f" ${c.wajibFullscreen ? 'checked' : ''}> Paksa layar penuh sepanjang sesi peserta, sejak login (jika didukung perangkat)</label><label class="ck"><input type="checkbox" name="t" ${c.tampilNilai ? 'checked' : ''}> Tampilkan nilai kepada peserta</label><label>Tata tertib ujian (satu poin per baris)<textarea class="inp" name="r" rows="5">${esc(c.tataTertib)}</textarea></label><div class="row"><button class="btn pri">Simpan pengaturan ujian</button></div></form></div>`;
+  S.logoTmp2 = null; $('#lgf2').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { S.logoTmp2 = await resizeLogo(f); $('#lgp2').innerHTML = lgoHtml(S.logoTmp2); } catch (x) { toast(x.message, 'er'); } };
   $('#lgf').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { S.logoTmp = await resizeLogo(f); $('#lgp').innerHTML = lgoHtml(S.logoTmp); } catch (x) { toast(x.message, 'er'); } };
   $('#kf').onsubmit = async e => { e.preventDefault(); const f = new FormData(e.target), g = n => String(f.get(n) || '').trim();
-    const d = { ...k, nama: g('nama'), kop1: g('kop1'), kop2: g('kop2'), alamat: g('alamat'), kontak: g('kontak'), kota: g('kota'), tahunAjaran: g('tahunAjaran'), kepsek: g('kepsek'), nipKepsek: g('nipKepsek'), jenisUjian: g('jenisUjian'), kertas: f.get('kertas') === 'F4' ? 'F4' : 'A4', logo: S.logoTmp !== null ? S.logoTmp : (k.logo || '') }; delete d.id;
+    const d = { ...k, nama: g('nama'), kop1: g('kop1'), kop2: g('kop2'), kop3: g('kop3'), alamat: g('alamat'), kontak: g('kontak'), kota: g('kota'), tahunAjaran: g('tahunAjaran'), kepsek: g('kepsek'), nipKepsek: g('nipKepsek'), jenisUjian: g('jenisUjian'), kertas: f.get('kertas') === 'F4' ? 'F4' : 'A4', logo: S.logoTmp !== null ? S.logoTmp : (k.logo || ''), logo2: S.logoTmp2 !== null && S.logoTmp2 !== undefined ? S.logoTmp2 : (k.logo2 || '') }; delete d.id;
     await busy(e.target.querySelector('.pri'), async () => { try { await DB.saveSekolah(d); S.sek = d; S.cfg.namaSekolah = d.nama; toast('Identitas disimpan.'); BAP.invalidate(); renderShell(); PAGES.setting(); } catch (x) { toast('Gagal: ' + x.message, 'er'); } }); };
   $('#sf').onsubmit = async e => { e.preventDefault(); const f = new FormData(e.target); const d = { maxPelanggaran: Math.max(1, Math.min(10, +f.get('m') || 3)), penalti1: Math.max(0, Math.min(60, +f.get('p1') || 0)), penalti2: Math.max(0, Math.min(60, +f.get('p2') || 0)), tokenRotasi: Math.max(0, Math.min(240, +f.get('tr') || 0)), antiDual: !!f.get('ad'), antiDebug: !!f.get('ab'), watermark: !!f.get('wm'), wajibFullscreen: !!f.get('f'), tampilNilai: !!f.get('t'), tataTertib: f.get('r').trim() };
     await busy(e.target.querySelector('.pri'), async () => { try { const rb = +S.cfg.tokenRotasi || 0; await DB.savePengaturan(d); S.cfg = { ...CFG0, ...d, namaSekolah: S.sek.nama || '' }; toast('Pengaturan ujian disimpan.'); if (rb !== d.tokenRotasi) { toast('Menerapkan pengaturan token ke semua ujian...'); const n = await resyncAllTokens(); toast('Token diterapkan ke ' + n + ' ujian.'); } } catch (x) { toast('Gagal: ' + x.message, 'er'); } }); };
@@ -1645,6 +1649,7 @@ ACT.kpApply = b => busy(b, async () => {
     S.kp = v; toast('Kode Pengawas disimpan dan diterapkan ke ' + uj.length + ' ujian.');
   } catch (x) { toast('Gagal: ' + x.message, 'er'); }
 });
+ACT.lgDel2 = () => { S.logoTmp2 = ''; $('#lgp2').innerHTML = lgoHtml(''); const f = $('#lgf2'); if (f) f.value = ''; };
 ACT.lgDel = () => { S.logoTmp = ''; $('#lgp').innerHTML = lgoHtml(''); const f = $('#lgf'); if (f) f.value = ''; };
 ACT.kopPrev = b => busy(b, async () => { try { const doc = await newPdf(); const y = pdfKop(doc); pdfTitle(doc, y, 'CONTOH LAPORAN', [['Ujian', 'Contoh ujian'], ['Kelas', 'Semua kelas']]); pdfTtd(doc, y + 40); pdfSave(doc, 'pratinjau-kop.pdf'); } catch (x) { toast(x.message || 'Gagal membuat PDF', 'er'); } });
 
@@ -2640,9 +2645,10 @@ function newDoc(orient) {
 const tblBase = (mL, mR) => ({ theme: 'grid', margin: { left: mL, right: mR }, styles: { font: 'times', fontSize: 10, lineColor: [0, 0, 0], lineWidth: 0.2, textColor: 0, cellPadding: 1.8, valign: 'top' }, headStyles: { fillColor: [255, 255, 255], textColor: 0, fontStyle: 'bold', halign: 'center' } });
 function drawKop(doc, W, mL, mR) {
   const st = S.data.settings || {}; let y = 14;
-  if (st.logo) { try { doc.addImage(st.logo, /^data:image\/jpe?g/.test(st.logo) ? 'JPEG' : 'PNG', mL, y - 2, 23, 23); } catch (e) { /* logo diabaikan */ } }
+  const lg = (img, x) => { if (img) { try { doc.addImage(img, /^data:image\/jpe?g/.test(img) ? 'JPEG' : 'PNG', x, y - 2, 23, 23); } catch (e) { /* logo diabaikan */ } } };
+  lg(st.logo, mL); lg(st.logo2, W - mR - 23);
   doc.setFont('times', 'normal'); doc.setFontSize(11); const cx = W / 2; let ty = y + 2;
-  [st.kop1, st.kop2].filter(Boolean).forEach(t => { doc.text(String(t).toUpperCase(), cx, ty, { align: 'center' }); ty += 5; });
+  [st.kop1, st.kop2, st.kop3].filter(Boolean).forEach(t => { doc.text(String(t).toUpperCase(), cx, ty, { align: 'center' }); ty += 5; });
   doc.setFont('times', 'bold'); doc.setFontSize(15); doc.text(String(st.nama || 'NAMA SEKOLAH').toUpperCase(), cx, ty + 1, { align: 'center' }); ty += 6;
   doc.setFont('times', 'normal'); doc.setFontSize(9.5);
   const al = doc.splitTextToSize([st.alamat, st.kontak].filter(Boolean).join('\n') || '', W - mL - mR - 52); doc.text(al, cx, ty, { align: 'center' }); ty += al.length * 4.2;

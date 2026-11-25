@@ -617,6 +617,7 @@ const ICON = {eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/>
   award: '<circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>',
   alert: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
   sliders: '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>',
+  archive: '<polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/>',
   edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>',
   plus: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
@@ -794,7 +795,7 @@ const MENU_ADMIN = [
   { k: 'm_siswa', t: 'Daftar Peserta', i: 'users' }, { k: 'm_pengawas', t: 'Pengawas', i: 'shield' },
   { h: 'Ujian' },
   { k: 'ujian', t: 'Data Ujian', s: 'Ujian', i: 'calendar', mob: 1 }, { k: 'pantau', t: 'Pantauan Ujian', s: 'Pantau', i: 'activity', mob: 1 },
-  { k: 'nilai', t: 'Rekap Nilai', s: 'Nilai', i: 'award', mob: 1 }, { k: 'log', t: 'Log Pelanggaran', s: 'Log', i: 'alert', mob: 1 },
+  { k: 'nilai', t: 'Rekap Nilai', s: 'Nilai', i: 'award', mob: 1 }, { k: 'arsip', t: 'Arsip Ujian', s: 'Arsip', i: 'archive' }, { k: 'log', t: 'Log Pelanggaran', s: 'Log', i: 'alert', mob: 1 },
   { h: 'Berita Acara Pelaksanaan' },
   { k: 'bdash', t: 'Dashboard BAP', s: 'BAP', i: 'clipboard', mob: 1 }, { k: 'brekap', t: 'Rekap BAP', s: 'Rekap', i: 'file', mob: 1 },
   { h: 'Sistem' },
@@ -1034,37 +1035,68 @@ PAGES.ujian = async () => {
 };
 function drawUjian(full) {
   const el = $('#page'), uj = C.ujian || [], now = Date.now(), t0 = dStr(now);
-  if (S.uMode === undefined) S.uMode = 'akan'; if (!S.uTg) S.uTg = t0; S.uTk = S.uTk || ''; S.uTp = S.uTp || ''; S.uq = S.uq || '';
+  if (S.uMode === undefined || S.uMode === 'arsip') S.uMode = 'akan'; if (!S.uTg) S.uTg = t0; S.uTk = S.uTk || ''; S.uTp = S.uTp || ''; S.uq = S.uq || '';
   const inTk = u => !S.uTk || !u.tingkat || u.tingkat === 'SEMUA' || u.tingkat === S.uTk;
   const inTp = u => !S.uTp || (S.uTp === '-' ? !u.tipe : u.tipe === S.uTp);
   const q = S.uq.toLowerCase(), inQ = u => !q || (u.judul || '').toLowerCase().includes(q) || (u.mapel || '').toLowerCase().includes(q);
-  const base = uj.filter(u => inTk(u) && inTp(u) && inQ(u));
+  const base = uj.filter(u => !u.arsip && inTk(u) && inTp(u) && inQ(u));
   const modeF = { hari: u => dStr(u.mulai) === S.uTg, akan: u => u.selesai >= now, selesai: u => u.selesai < now, semua: () => true };
   const cnt = k => base.filter(modeF[k]).length;
   let L = base.filter(modeF[S.uMode]).sort((x, y) => S.uMode === 'selesai' ? y.mulai - x.mulai : x.mulai - y.mulai);
-  const modes = [['hari', 'Harian'], ['akan', 'Akan datang'], ['selesai', 'Arsip'], ['semua', 'Semua']];
+  const modes = [['hari', 'Hari ini'], ['akan', 'Akan datang'], ['selesai', 'Selesai'], ['semua', 'Semua']];
   const tipeSet = [...new Set([...Object.keys(TIPE), ...uj.map(u => u.tipe).filter(Boolean)])];
   const names = u => (S.jmap[u.id] || []).map(j => j.ruangNama).sort((x, y) => x.localeCompare(y, 'id', { numeric: true }));
   const card = u => { const st = UJB[ujStatus(u, now)], a = S.adm[u.id] || {}, arsip = u.selesai < now;
-    return `<div class="card uc"><div class="row" style="justify-content:space-between;align-items:flex-start"><h3>${esc(u.judul)}</h3>${badge(st[0], st[1])}</div><div class="meta">${subline(u)}<span>${fmtDT(u.mulai)} &rarr; ${fmtDT(u.selesai)}${u.jamKe ? ' &bull; Jam ke-' + u.jamKe : ''}</span>${ruangDD(names(u))}</div>${arsip ? '' : `<div class="tokrow"><span class="mu">Token</span><span class="tok" data-tk="${u.id}">${esc(a.token || '-')}</span><small class="cd mu" data-cd="${u.id}"></small><button class="ib" data-act="uCopy" data-id="${u.id}" title="Salin token">${ic('copy', 16)}</button><button class="ib" data-act="uTok" data-id="${u.id}" title="Buat token baru">${ic('refresh', 16)}</button></div>`}<div class="row end" style="margin-top:10px;flex-wrap:wrap">${arsip ? `<button class="btn sm" data-act="uNilai" data-id="${u.id}">${ic('award', 15)}Rekap nilai</button><button class="btn sm" data-act="goPantau" data-id="${u.id}">${ic('activity', 15)}Pantauan</button>` : ''}<button class="btn sm" data-act="uEdit" data-id="${u.id}">${ic('edit', 15)}Ubah</button><button class="btn sm" data-act="uDel" data-id="${u.id}">${ic('trash', 15)}Hapus</button></div></div>`; };
+    return `<div class="card uc"><div class="row" style="justify-content:space-between;align-items:flex-start"><h3>${esc(u.judul)}</h3>${badge(st[0], st[1])}</div><div class="meta">${subline(u)}<span>${fmtDT(u.mulai)} &rarr; ${fmtDT(u.selesai)}${u.jamKe ? ' &bull; Jam ke-' + u.jamKe : ''}</span>${ruangDD(names(u))}</div>${arsip ? '' : `<div class="tokrow"><span class="mu">Token</span><span class="tok" data-tk="${u.id}">${esc(a.token || '-')}</span><small class="cd mu" data-cd="${u.id}"></small><button class="ib" data-act="uCopy" data-id="${u.id}" title="Salin token">${ic('copy', 16)}</button><button class="ib" data-act="uTok" data-id="${u.id}" title="Buat token baru">${ic('refresh', 16)}</button></div>`}<div class="row end" style="margin-top:10px;flex-wrap:wrap">${arsip ? `<button class="btn sm" data-act="uNilai" data-id="${u.id}">${ic('award', 15)}Rekap nilai</button><button class="btn sm" data-act="goPantau" data-id="${u.id}">${ic('activity', 15)}Pantauan</button><button class="btn sm" data-act="uArsipkan" data-id="${u.id}">${ic('archive', 15)}Arsipkan</button>` : ''}<button class="btn sm" data-act="uEdit" data-id="${u.id}">${ic('edit', 15)}Ubah</button><button class="btn sm" data-act="uDel" data-id="${u.id}">${ic('trash', 15)}Hapus</button></div></div>`; };
   let body;
-  if (!L.length) body = empty(S.uMode === 'selesai' ? 'Belum ada ujian yang selesai pada filter ini.' : 'Tidak ada ujian pada filter ini.');
-  else if (S.uMode === 'selesai') {
-    const g = {}; L.forEach(u => (g[u.tipe || ''] = g[u.tipe || ''] || []).push(u));
-    body = Object.keys(g).sort().map(k => `<div class="arsh"><h3>${esc(k ? tipeLbl(k) : 'Tanpa tipe ujian')}</h3><span class="badge gray">${g[k].length} ujian</span></div><div class="grid g2">${g[k].map(card).join('')}</div>`).join('');
-  } else body = `<div class="grid g2">${L.map(card).join('')}</div>`;
+  if (!L.length) body = empty(S.uMode === 'selesai' ? 'Tidak ada ujian selesai yang belum diarsipkan.' : 'Tidak ada ujian pada filter ini.');
+  else {
+    body = `<div class="grid g2">${L.map(card).join('')}</div>`;
+  }
   const filt = `<div class="card ufilt"><div class="seg">${modes.map(([k, n]) => `<button class="${S.uMode === k ? 'on' : ''}" data-act="uMode" data-m="${k}">${n} <small>${cnt(k)}</small></button>`).join('')}</div>
-  <div class="row wrap gap" style="margin-top:10px">${S.uMode === 'hari' ? `<input class="inp" type="date" data-inp="uTg" value="${S.uTg}" style="max-width:170px">` : ''}<select class="inp" data-inp="uTk" style="max-width:170px"><option value="">Semua tingkat</option>${['X', 'XI', 'XII'].map(t => `<option value="${t}" ${S.uTk === t ? 'selected' : ''}>Kelas ${t}</option>`).join('')}</select><select class="inp" data-inp="uTp" style="max-width:260px"><option value="">Semua tipe ujian</option>${tipeSet.map(t => `<option value="${esc(t)}" ${S.uTp === t ? 'selected' : ''}>${esc(t)}${TIPE[t] ? ' — ' + esc(TIPE[t].replace(/ \(.*/, '')) : ''}</option>`).join('')}<option value="-" ${S.uTp === '-' ? 'selected' : ''}>Tanpa tipe</option></select><div class="sr">${ic('search', 16)}<input class="inp" id="uq" placeholder="Cari judul atau mapel" data-inp="uq" value="${esc(S.uq)}"></div>${S.uMode === 'selesai' && L.length ? `<button class="btn sm" data-act="uArsipCsv">${ic('download', 15)}Ekspor arsip (CSV)</button>` : ''}</div></div>`;
-  if (full || !$('#ulist')) el.innerHTML = `<div class="ph"><h2>Data Ujian</h2><button class="btn pri" data-act="uAdd">${ic('plus', 16)}Tambah Ujian</button></div><p class="mu" style="margin:-6px 0 14px">Satu data ujian sekaligus membuat jadwal ruang untuk pengawas dan BAP. Ujian yang sudah lewat otomatis masuk tab Arsip.</p><div id="ufilt"></div><div id="ulist"></div>`;
+  <div class="row wrap gap" style="margin-top:10px">${S.uMode === 'hari' ? `<input class="inp" type="date" data-inp="uTg" value="${S.uTg}" style="max-width:170px">` : ''}<select class="inp" data-inp="uTk" style="max-width:170px"><option value="">Semua tingkat</option>${['X', 'XI', 'XII'].map(t => `<option value="${t}" ${S.uTk === t ? 'selected' : ''}>Kelas ${t}</option>`).join('')}</select><select class="inp" data-inp="uTp" style="max-width:260px"><option value="">Semua tipe ujian</option>${tipeSet.map(t => `<option value="${esc(t)}" ${S.uTp === t ? 'selected' : ''}>${esc(t)}${TIPE[t] ? ' — ' + esc(TIPE[t].replace(/ \(.*/, '')) : ''}</option>`).join('')}<option value="-" ${S.uTp === '-' ? 'selected' : ''}>Tanpa tipe</option></select><div class="sr">${ic('search', 16)}<input class="inp" id="uq" placeholder="Cari judul atau mapel" data-inp="uq" value="${esc(S.uq)}"></div></div></div>`;
+  if (full || !$('#ulist')) el.innerHTML = `<div class="ph"><h2>Data Ujian</h2><button class="btn pri" data-act="uAdd">${ic('plus', 16)}Tambah Ujian</button></div><p class="mu" style="margin:-6px 0 14px">Satu data ujian sekaligus membuat jadwal ruang untuk pengawas dan BAP. Ujian yang sudah selesai bisa dipindahkan ke menu Arsip Ujian dengan tombol Arsipkan.</p><div id="ufilt"></div><div id="ulist"></div>`;
   const keep = document.activeElement && document.activeElement.id === 'uq';
   $('#ufilt').innerHTML = filt; $('#ulist').innerHTML = body;
   if (keep) { const i = $('#uq'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
   startTokTick();
 }
+
+ACT.uArsipkan = async b => {
+  const u = C.ujian.find(x => x.id === b.dataset.id); if (!u) return;
+  if (u.selesai >= Date.now()) return toast('Hanya ujian yang sudah berakhir yang dapat diarsipkan.', 'er');
+  if (!await confirmBox(`Arsipkan ujian "${u.judul}"? Ujian dipindahkan ke menu Arsip Ujian (nilai dan data tetap tersimpan, bisa dikembalikan kapan saja).`, 'Arsipkan')) return;
+  try { const d = { ...u, arsip: true }; delete d.id; await DB.saveUjian(u.id, d); u.arsip = true; toast('Ujian diarsipkan.'); drawUjian(); } catch (x) { toast('Gagal: ' + x.message, 'er'); }
+};
+ACT.uUnarsip = async b => {
+  const u = C.ujian.find(x => x.id === b.dataset.id); if (!u) return;
+  try { const d = { ...u, arsip: false }; delete d.id; await DB.saveUjian(u.id, d); u.arsip = false; toast('Ujian dikembalikan ke Data Ujian.'); drawArsip(); } catch (x) { toast('Gagal: ' + x.message, 'er'); }
+};
+PAGES.arsip = async () => {
+  const el = $('#page'); el.innerHTML = loading();
+  await loadUjian(true); S.aTk = S.aTk || ''; S.aTp = S.aTp || ''; S.aq = S.aq || '';
+  el.innerHTML = `<div class="ph"><h2>Arsip Ujian</h2></div><p class="mu" style="margin:-6px 0 14px">Ujian yang sudah selesai dan diarsipkan dari menu Data Ujian. Nilai, pantauan, dan log tetap bisa dibuka.</p><div id="afilt"></div><div id="alist"></div>`;
+  S.draw = drawArsip; drawArsip(true);
+};
+function drawArsip(full) {
+  const uj = (C.ujian || []).filter(u => u.arsip), q = (S.aq || '').toLowerCase();
+  const tipeSet = [...new Set([...Object.keys(TIPE), ...uj.map(u => u.tipe).filter(Boolean)])];
+  const L = uj.filter(u => (!S.aTk || !u.tingkat || u.tingkat === 'SEMUA' || u.tingkat === S.aTk) && (!S.aTp || (S.aTp === '-' ? !u.tipe : u.tipe === S.aTp)) && (!q || (u.judul || '').toLowerCase().includes(q) || (u.mapel || '').toLowerCase().includes(q))).sort((x, y) => y.mulai - x.mulai);
+  const names = u => (u.ruangNama || []).filter(Boolean).slice().sort((x, y) => String(x).localeCompare(String(y), 'id', { numeric: true }));
+  const card = u => `<div class="card uc"><div class="row" style="justify-content:space-between;align-items:flex-start"><h3>${esc(u.judul)}</h3>${badge('Diarsipkan', 'gray')}</div><div class="meta">${subline(u)}<span>${fmtDT(u.mulai)} &rarr; ${fmtDT(u.selesai)}${u.jamKe ? ' &bull; Jam ke-' + u.jamKe : ''}</span>${ruangDD(names(u))}</div><div class="row end" style="margin-top:10px;flex-wrap:wrap"><button class="btn sm" data-act="uNilai" data-id="${u.id}">${ic('award', 15)}Rekap nilai</button><button class="btn sm" data-act="goPantau" data-id="${u.id}">${ic('activity', 15)}Pantauan</button><button class="btn sm" data-act="uUnarsip" data-id="${u.id}">${ic('refresh', 15)}Kembalikan</button></div></div>`;
+  let body;
+  if (!L.length) body = empty(uj.length ? 'Tidak ada arsip pada filter ini.' : 'Belum ada ujian yang diarsipkan. Buka Data Ujian, lalu klik Arsipkan pada ujian yang sudah selesai.');
+  else { const g = {}; L.forEach(u => (g[u.tipe || ''] = g[u.tipe || ''] || []).push(u));
+    body = Object.keys(g).sort().map(k => `<div class="arsh"><h3>${esc(k ? tipeLbl(k) : 'Tanpa tipe ujian')}</h3><span class="badge gray">${g[k].length} ujian</span></div><div class="grid g2">${g[k].map(card).join('')}</div>`).join(''); }
+  const filt = `<div class="card ufilt"><div class="row wrap gap"><select class="inp" data-inp="aTk" style="max-width:170px"><option value="">Semua tingkat</option>${['X', 'XI', 'XII'].map(t => `<option value="${t}" ${S.aTk === t ? 'selected' : ''}>Kelas ${t}</option>`).join('')}</select><select class="inp" data-inp="aTp" style="max-width:260px"><option value="">Semua tipe ujian</option>${tipeSet.map(t => `<option value="${esc(t)}" ${S.aTp === t ? 'selected' : ''}>${esc(t)}${TIPE[t] ? ' — ' + esc(TIPE[t].replace(/ \(.*/, '')) : ''}</option>`).join('')}<option value="-" ${S.aTp === '-' ? 'selected' : ''}>Tanpa tipe</option></select><div class="sr">${ic('search', 16)}<input class="inp" id="aq" placeholder="Cari judul atau mapel" data-inp="aq" value="${esc(S.aq)}"></div>${L.length ? `<button class="btn sm" data-act="uArsipCsv">${ic('download', 15)}Ekspor (CSV)</button>` : ''}</div></div>`;
+  const keep = document.activeElement && document.activeElement.id === 'aq';
+  $('#afilt').innerHTML = filt; $('#alist').innerHTML = body;
+  if (keep) { const i = $('#aq'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
+}
 ACT.uMode = b => { S.uMode = b.dataset.m; drawUjian(); };
 ACT.uNilai = b => { S.nu = b.dataset.id; go('nilai'); };
 ACT.uArsipCsv = () => {
-  const now = Date.now(); const L = (C.ujian || []).filter(u => u.selesai < now).sort((x, y) => y.mulai - x.mulai);
+  const L = (C.ujian || []).filter(u => u.arsip).sort((x, y) => y.mulai - x.mulai);
   download('arsip-ujian.csv', csvLine(['judul', 'tipe', 'mapel', 'tingkat', 'tanggal', 'jam_ke', 'durasi_menit', 'ruang']) + '\n' + L.map(u => csvLine([u.judul, u.tipe || '', u.mapel, u.tingkat || 'SEMUA', dStr(u.mulai), u.jamKe || '', u.durasiMenit, (u.ruangNama || []).join(' | ')])).join('\n'));
 };
 function ujianForm(u) {
@@ -1123,7 +1155,7 @@ const readKp = () => { try { return localStorage.getItem('nerin_kp') || ''; } ca
 S.pmode = 'today';
 PAGES.pujian = async () => {
   const el = $('#page'); el.innerHTML = loading(); if (S.kp === undefined || S.kp === '') S.kp = readKp();
-  const all = (await DB.listUjian()).filter(u => u.aktif).sort((a, b) => a.mulai - b.mulai), t = dStr(Date.now());
+  const all = (await DB.listUjian()).filter(u => u.aktif && !u.arsip).sort((a, b) => a.mulai - b.mulai), t = dStr(Date.now());
   let mode = S.pmode; if (mode === 'today' && !all.some(u => dStr(u.mulai) === t) && all.some(u => dStr(u.mulai) > t)) mode = 'next';
   const L = all.filter(u => mode === 'all' || (mode === 'today' ? dStr(u.mulai) === t : dStr(u.mulai) > t)), now = Date.now();
   const modes = [['today', 'Hari ini'], ['next', 'Mendatang'], ['all', 'Semua']];

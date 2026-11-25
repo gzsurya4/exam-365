@@ -507,6 +507,28 @@ html,body{overscroll-behavior:none}
 #app .pwax{display:flex;gap:8px;margin-top:12px}
 #app .pwax .btn{flex:1;justify-content:center}
 #app .pwan{display:block;margin:8px auto 0;border:0;background:none;color:#8aa0b8;font:inherit;font-size:11.5px;cursor:pointer;text-decoration:underline}
+
+/* Data Ujian: spotlight subjudul, dropdown ruang, filter, arsip */
+#app .spl{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 4px}
+#app .spc{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;line-height:1.3;letter-spacing:.1px}
+#app .spc.m{background:#DDF1FF;color:#0E6FD1;text-transform:uppercase}
+#app .spc.d{background:#FFF1D6;color:#B25E00}
+#app .spc.t{background:#E3F8EA;color:#13803E}
+#app .spc.y{background:#EFE6FF;color:#6B3FD4}
+#app .rdd{background:rgba(42,167,255,.07);border:1px solid #D3E6F7;border-radius:14px;padding:6px 12px}
+#app .rdd summary{cursor:pointer;list-style:none;display:flex;gap:8px;align-items:center;font-size:12.5px;color:#4a6584}
+#app .rdd summary::-webkit-details-marker{display:none}
+#app .rdd summary b{color:#0E6FD1;white-space:nowrap}
+#app .rdd summary span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+#app .rdd summary:after{content:"\25BE";color:#1688F0;margin-left:auto}
+#app .rdd[open] summary:after{content:"\25B4"}
+#app .rchips{display:flex;flex-wrap:wrap;gap:6px;padding:8px 0 4px;max-height:150px;overflow:auto}
+#app .rchips span{background:#fff;border:1px solid #D3E6F7;border-radius:999px;padding:2px 10px;font-size:12px;color:#335}
+#app .ufilt{margin-bottom:14px}
+#app .ufilt .seg button small{opacity:.75;font-weight:700;margin-left:4px}
+#app .ufilt .seg{display:flex;flex-wrap:wrap}
+#app .arsh{display:flex;align-items:center;gap:10px;margin:18px 0 8px}
+#app .arsh h3{margin:0;font-size:15px}
 </style>
 </head>
 <body>
@@ -990,6 +1012,16 @@ async function syncJadwal(id, base, ruangIds, ruangMap) {
   for (const rid of ruangIds) if (!have.has(rid)) await BAP.db.set('jadwal', id + '_' + rid, { ...base, ruangId: rid, ruangNama: (ruangMap[rid] || {}).nama || '' });
   BAP.invalidate(); return blocked;
 }
+
+const TIPE = { ASAS: 'Asesmen Sumatif Akhir Semester (ASAS)', ASAT: 'Asesmen Sumatif Tengah Semester (ASAT)', PSAJ: 'Penilaian Sumatif Akhir Jenjang (PSAJ)', UB: 'Ulangan Bersama (UB)' };
+const tipeLbl = c => TIPE[c] || c || '';
+const tkLbl = u => (!u.tingkat || u.tingkat === 'SEMUA') ? 'Semua tingkat' : 'Kelas ' + u.tingkat;
+const subline = u => `<span class="spl"><span class="spc m">${esc(u.mapel)}</span><span class="spc d">${u.durasiMenit} menit</span><span class="spc t">${esc(tkLbl(u))}</span>${u.tipe ? `<span class="spc y">${esc(u.tipe)}</span>` : ''}</span>`;
+const ruangDD = names => {
+  const n = names.length; if (!n) return '<span class="mu">Ruang: <i>belum dijadwalkan ke ruang</i></span>';
+  const sum = n <= 2 ? names.join(', ') : names.slice(0, 2).join(', ') + ' +' + (n - 2) + ' lainnya';
+  return `<details class="rdd"><summary><b>${n} ruang</b><span>${esc(sum)}</span></summary><div class="rchips">${names.map(x => `<span>${esc(x)}</span>`).join('')}</div></details>`;
+};
 PAGES.ujian = async () => {
   const el = $('#page'); el.innerHTML = loading();
   const [uj, jd, rg, mp] = await Promise.all([loadUjian(true), BAP.db.list('jadwal'), BAP.db.list('ruang'), BAP.db.list('mapel')]);
@@ -998,18 +1030,50 @@ PAGES.ujian = async () => {
   S.jmap = {}; jd.forEach(j => { (S.jmap[j.ujianId] = S.jmap[j.ujianId] || []).push(j); });
   S.ruangFull = rg.sort((a, b) => a.nama.localeCompare(b.nama, 'id', { numeric: true })); S.mapelList = mp.map(m => m.nama).sort();
   S.tk = {}; for (const u of uj) { const a = S.adm[u.id]; if (a.seed && a.rot) S.tk[u.id] = { rot: a.rot * 60000, mulai: u.mulai, selesai: u.selesai, tokens: await Promise.all(slotsOf(u, a.rot * 60000).map(sl => tokenAt(a.seed, sl.i))) }; }
-  const now = Date.now();
-  const card = u => { const s = UJB[ujStatus(u, now)], a = S.adm[u.id], rr = (S.jmap[u.id] || []).map(j => j.ruangNama).sort((x, y) => x.localeCompare(y, 'id', { numeric: true }));
-    return `<div class="card uc"><div class="row" style="justify-content:space-between;align-items:flex-start"><h3>${esc(u.judul)}</h3>${badge(s[0], s[1])}</div><div class="meta"><span>${esc(u.mapel)} &bull; ${u.durasiMenit} menit &bull; ${!u.tingkat || u.tingkat === 'SEMUA' ? 'Semua tingkat' : 'Kelas ' + u.tingkat}</span><span>${fmtDT(u.mulai)} &rarr; ${fmtDT(u.selesai)}${u.jamKe ? ' &bull; Jam ke-' + u.jamKe : ''}</span><span>Ruang: ${rr.length ? esc(rr.join(', ')) : '<i>belum dijadwalkan ke ruang</i>'}</span></div><div class="tokrow"><span class="mu">Token</span><span class="tok" data-tk="${u.id}">${esc(a.token || '-')}</span><small class="cd mu" data-cd="${u.id}"></small><button class="ib" data-act="uCopy" data-id="${u.id}" title="Salin token">${ic('copy', 16)}</button><button class="ib" data-act="uTok" data-id="${u.id}" title="Buat token baru">${ic('refresh', 16)}</button></div><div class="row end" style="margin-top:10px"><button class="btn sm" data-act="uEdit" data-id="${u.id}">${ic('edit', 15)}Ubah</button><button class="btn sm" data-act="uDel" data-id="${u.id}">${ic('trash', 15)}Hapus</button></div></div>`; };
-  el.innerHTML = `<div class="ph"><h2>Data Ujian</h2><button class="btn pri" data-act="uAdd">${ic('plus', 16)}Tambah Ujian</button></div><p class="mu" style="margin:-6px 0 14px">Satu data ujian sekaligus membuat jadwal ruang untuk pengawas dan BAP. Tidak perlu mengisi jadwal dua kali.</p>${uj.length ? `<div class="grid g2">${uj.map(card).join('')}</div>` : empty('Belum ada ujian. Klik "Tambah Ujian" untuk membuat.')}`;
+  S.draw = drawUjian; drawUjian(true);
+};
+function drawUjian(full) {
+  const el = $('#page'), uj = C.ujian || [], now = Date.now(), t0 = dStr(now);
+  if (S.uMode === undefined) S.uMode = 'akan'; if (!S.uTg) S.uTg = t0; S.uTk = S.uTk || ''; S.uTp = S.uTp || ''; S.uq = S.uq || '';
+  const inTk = u => !S.uTk || !u.tingkat || u.tingkat === 'SEMUA' || u.tingkat === S.uTk;
+  const inTp = u => !S.uTp || (S.uTp === '-' ? !u.tipe : u.tipe === S.uTp);
+  const q = S.uq.toLowerCase(), inQ = u => !q || (u.judul || '').toLowerCase().includes(q) || (u.mapel || '').toLowerCase().includes(q);
+  const base = uj.filter(u => inTk(u) && inTp(u) && inQ(u));
+  const modeF = { hari: u => dStr(u.mulai) === S.uTg, akan: u => u.selesai >= now, selesai: u => u.selesai < now, semua: () => true };
+  const cnt = k => base.filter(modeF[k]).length;
+  let L = base.filter(modeF[S.uMode]).sort((x, y) => S.uMode === 'selesai' ? y.mulai - x.mulai : x.mulai - y.mulai);
+  const modes = [['hari', 'Harian'], ['akan', 'Akan datang'], ['selesai', 'Arsip'], ['semua', 'Semua']];
+  const tipeSet = [...new Set([...Object.keys(TIPE), ...uj.map(u => u.tipe).filter(Boolean)])];
+  const names = u => (S.jmap[u.id] || []).map(j => j.ruangNama).sort((x, y) => x.localeCompare(y, 'id', { numeric: true }));
+  const card = u => { const st = UJB[ujStatus(u, now)], a = S.adm[u.id] || {}, arsip = u.selesai < now;
+    return `<div class="card uc"><div class="row" style="justify-content:space-between;align-items:flex-start"><h3>${esc(u.judul)}</h3>${badge(st[0], st[1])}</div><div class="meta">${subline(u)}<span>${fmtDT(u.mulai)} &rarr; ${fmtDT(u.selesai)}${u.jamKe ? ' &bull; Jam ke-' + u.jamKe : ''}</span>${ruangDD(names(u))}</div>${arsip ? '' : `<div class="tokrow"><span class="mu">Token</span><span class="tok" data-tk="${u.id}">${esc(a.token || '-')}</span><small class="cd mu" data-cd="${u.id}"></small><button class="ib" data-act="uCopy" data-id="${u.id}" title="Salin token">${ic('copy', 16)}</button><button class="ib" data-act="uTok" data-id="${u.id}" title="Buat token baru">${ic('refresh', 16)}</button></div>`}<div class="row end" style="margin-top:10px;flex-wrap:wrap">${arsip ? `<button class="btn sm" data-act="uNilai" data-id="${u.id}">${ic('award', 15)}Rekap nilai</button><button class="btn sm" data-act="goPantau" data-id="${u.id}">${ic('activity', 15)}Pantauan</button>` : ''}<button class="btn sm" data-act="uEdit" data-id="${u.id}">${ic('edit', 15)}Ubah</button><button class="btn sm" data-act="uDel" data-id="${u.id}">${ic('trash', 15)}Hapus</button></div></div>`; };
+  let body;
+  if (!L.length) body = empty(S.uMode === 'selesai' ? 'Belum ada ujian yang selesai pada filter ini.' : 'Tidak ada ujian pada filter ini.');
+  else if (S.uMode === 'selesai') {
+    const g = {}; L.forEach(u => (g[u.tipe || ''] = g[u.tipe || ''] || []).push(u));
+    body = Object.keys(g).sort().map(k => `<div class="arsh"><h3>${esc(k ? tipeLbl(k) : 'Tanpa tipe ujian')}</h3><span class="badge gray">${g[k].length} ujian</span></div><div class="grid g2">${g[k].map(card).join('')}</div>`).join('');
+  } else body = `<div class="grid g2">${L.map(card).join('')}</div>`;
+  const filt = `<div class="card ufilt"><div class="seg">${modes.map(([k, n]) => `<button class="${S.uMode === k ? 'on' : ''}" data-act="uMode" data-m="${k}">${n} <small>${cnt(k)}</small></button>`).join('')}</div>
+  <div class="row wrap gap" style="margin-top:10px">${S.uMode === 'hari' ? `<input class="inp" type="date" data-inp="uTg" value="${S.uTg}" style="max-width:170px">` : ''}<select class="inp" data-inp="uTk" style="max-width:170px"><option value="">Semua tingkat</option>${['X', 'XI', 'XII'].map(t => `<option value="${t}" ${S.uTk === t ? 'selected' : ''}>Kelas ${t}</option>`).join('')}</select><select class="inp" data-inp="uTp" style="max-width:260px"><option value="">Semua tipe ujian</option>${tipeSet.map(t => `<option value="${esc(t)}" ${S.uTp === t ? 'selected' : ''}>${esc(t)}${TIPE[t] ? ' — ' + esc(TIPE[t].replace(/ \(.*/, '')) : ''}</option>`).join('')}<option value="-" ${S.uTp === '-' ? 'selected' : ''}>Tanpa tipe</option></select><div class="sr">${ic('search', 16)}<input class="inp" id="uq" placeholder="Cari judul atau mapel" data-inp="uq" value="${esc(S.uq)}"></div>${S.uMode === 'selesai' && L.length ? `<button class="btn sm" data-act="uArsipCsv">${ic('download', 15)}Ekspor arsip (CSV)</button>` : ''}</div></div>`;
+  if (full || !$('#ulist')) el.innerHTML = `<div class="ph"><h2>Data Ujian</h2><button class="btn pri" data-act="uAdd">${ic('plus', 16)}Tambah Ujian</button></div><p class="mu" style="margin:-6px 0 14px">Satu data ujian sekaligus membuat jadwal ruang untuk pengawas dan BAP. Ujian yang sudah lewat otomatis masuk tab Arsip.</p><div id="ufilt"></div><div id="ulist"></div>`;
+  const keep = document.activeElement && document.activeElement.id === 'uq';
+  $('#ufilt').innerHTML = filt; $('#ulist').innerHTML = body;
+  if (keep) { const i = $('#uq'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
   startTokTick();
+}
+ACT.uMode = b => { S.uMode = b.dataset.m; drawUjian(); };
+ACT.uNilai = b => { S.nu = b.dataset.id; go('nilai'); };
+ACT.uArsipCsv = () => {
+  const now = Date.now(); const L = (C.ujian || []).filter(u => u.selesai < now).sort((x, y) => y.mulai - x.mulai);
+  download('arsip-ujian.csv', csvLine(['judul', 'tipe', 'mapel', 'tingkat', 'tanggal', 'jam_ke', 'durasi_menit', 'ruang']) + '\n' + L.map(u => csvLine([u.judul, u.tipe || '', u.mapel, u.tingkat || 'SEMUA', dStr(u.mulai), u.jamKe || '', u.durasiMenit, (u.ruangNama || []).join(' | ')])).join('\n'));
 };
 function ujianForm(u) {
   const a = u ? (S.adm[u.id] || {}) : {}; const now = Date.now();
   const mulai = u?.mulai || now, selesai = u?.selesai || now + 7200000;
   const tg = u?.tanggal || dStr(mulai), jm = u?.jamMulai || tStr(mulai), js = u?.jamSelesai || tStr(selesai);
   const pilih = new Set(u ? (S.jmap[u.id] || []).map(j => j.ruangId) : []);
-  const w = openModal(u ? 'Ubah Ujian' : 'Tambah Ujian', `<form id="uf" class="form"><label>Judul ujian<input class="inp" name="j" required value="${esc(u?.judul || '')}"></label><label>Mata pelajaran<input class="inp" name="m" required list="mapeldl" placeholder="Pilih dari Data Master atau ketik baru" value="${esc(u?.mapel || '')}"><datalist id="mapeldl">${(S.mapelList || []).map(m => `<option value="${esc(m)}">`).join('')}</datalist></label><label>Peserta ujian (tingkat)<select class="inp" name="t" style="width:100%">${['X', 'XI', 'XII', 'SEMUA'].map(t => `<option value="${t}" ${(u?.tingkat || 'X') === t ? 'selected' : ''}>${t === 'SEMUA' ? 'Semua tingkat' : 'Kelas ' + t}</option>`).join('')}</select></label>
+  const w = openModal(u ? 'Ubah Ujian' : 'Tambah Ujian', `<form id="uf" class="form"><label>Judul ujian<input class="inp" name="j" required value="${esc(u?.judul || '')}"></label><label>Mata pelajaran<input class="inp" name="m" required list="mapeldl" placeholder="Pilih dari Data Master atau ketik baru" value="${esc(u?.mapel || '')}"><datalist id="mapeldl">${(S.mapelList || []).map(m => `<option value="${esc(m)}">`).join('')}</datalist></label><label>Tipe ujian<select class="inp" name="tp" style="width:100%" onchange="this.parentNode.querySelector('input').style.display=this.value==='LAIN'?'block':'none'"><option value="">- Pilih tipe -</option>${Object.keys(TIPE).map(k => `<option value="${k}" ${u?.tipe === k ? 'selected' : ''}>${esc(TIPE[k])}</option>`).join('')}<option value="LAIN" ${u?.tipe && !TIPE[u.tipe] ? 'selected' : ''}>Lainnya (ketik sendiri)</option></select><input class="inp" name="tl" placeholder="mis. Ujian Praktik" style="margin-top:6px;display:${u?.tipe && !TIPE[u.tipe] ? 'block' : 'none'}" value="${u?.tipe && !TIPE[u.tipe] ? esc(u.tipe) : ''}"></label>
+  <label>Peserta ujian (tingkat)<select class="inp" name="t" style="width:100%">${['X', 'XI', 'XII', 'SEMUA'].map(t => `<option value="${t}" ${(u?.tingkat || 'X') === t ? 'selected' : ''}>${t === 'SEMUA' ? 'Semua tingkat' : 'Kelas ' + t}</option>`).join('')}</select></label>
   <div class="two"><label>Tanggal<input class="inp" type="date" name="tg" required value="${tg}"></label><label>Jam ke-<select class="inp" name="jk" required style="width:100%"><option value="">Pilih</option>${Array.from({ length: 10 }, (_, i) => `<option value="${i + 1}" ${u?.jamKe === i + 1 ? 'selected' : ''}>Jam ke-${i + 1}</option>`).join('')}</select></label></div>
   <div class="two"><label>Jam mulai<input class="inp" type="time" name="jm" required value="${jm}"></label><label>Jam selesai<input class="inp" type="time" name="js" required value="${js}"></label></div>
   <label>Durasi pengerjaan (menit)<input class="inp" type="number" name="d" min="1" max="600" required value="${u?.durasiMenit || 60}"></label>
@@ -1022,13 +1086,13 @@ function ujianForm(u) {
     const url = normForms(f.get('f')); if (!url) return toast('Link Microsoft Forms tidak valid (harus dari forms.office.com / forms.microsoft.com).', 'er');
     await busy(e.target.querySelector('.pri'), async () => {
       try {
-        const id = u?.id || newId(), token = a.token || genToken(), aktif = !!f.get('a'), tingkat = f.get('t'), jamKe = +f.get('jk');
+        const id = u?.id || newId(), token = a.token || genToken(), aktif = !!f.get('a'), tingkat = f.get('t'), jamKe = +f.get('jk'), tipe = f.get('tp') === 'LAIN' ? String(f.get('tl') || '').trim() : String(f.get('tp') || '');
         const ruangIds = f.getAll('rg'), rm = Object.fromEntries((S.ruangFull || []).map(r => [r.id, r])), mapelNama = f.get('m').trim(), judul = f.get('j').trim();
         for (const j of await BAP.db.list('jadwal', [['tanggal', '==', tgl]])) if (j.ujianId !== id && j.jamKe === jamKe && ruangIds.includes(j.ruangId)) throw new Error('Bentrok jadwal: ' + j.ruangNama + ' sudah dipakai ' + j.mapelNama + ' pada jam ke-' + jamKe + ' tanggal tersebut.');
         const mp = await ensureMapel(mapelNama);
-        await DB.saveUjian(id, { judul, mapel: mapelNama, mapelId: mp.id, tanggal: tgl, jamKe, jamMulai: f.get('jm'), jamSelesai: f.get('js'), ruangIds, ruangNama: ruangIds.map(r => (rm[r] || {}).nama || ''), mulai: mulaiT, selesai: selesaiT, durasiMenit: +f.get('d'), aktif, tingkat, lingkup: aktif ? tingkat : 'NONAKTIF' });
+        await DB.saveUjian(id, { judul, mapel: mapelNama, mapelId: mp.id, tanggal: tgl, jamKe, jamMulai: f.get('jm'), jamSelesai: f.get('js'), ruangIds, ruangNama: ruangIds.map(r => (rm[r] || {}).nama || ''), mulai: mulaiT, selesai: selesaiT, durasiMenit: +f.get('d'), aktif, tingkat, tipe, lingkup: aktif ? tingkat : 'NONAKTIF' });
         await applyToken({ id, judul, mulai: mulaiT, selesai: selesaiT }, u ? S.adm[id] : {}, url, false);
-        const blocked = await syncJadwal(id, { tanggal: tgl, jamKe, jamMulai: f.get('jm'), jamSelesai: f.get('js'), mapelId: mp.id, mapelNama, ujianId: id, ujianJudul: judul }, ruangIds, rm);
+        const blocked = await syncJadwal(id, { tanggal: tgl, jamKe, jamMulai: f.get('jm'), jamSelesai: f.get('js'), mapelId: mp.id, mapelNama, ujianId: id, ujianJudul: judul, jenisUjian: tipe ? tipeLbl(tipe) : '' }, ruangIds, rm);
         w.remove(); toast(blocked.length ? 'Ujian disimpan. Ruang ' + blocked.join(', ') + ' tidak dilepas karena sudah punya BAP.' : 'Ujian dan jadwal ruang disimpan.'); PAGES.ujian();
       } catch (x) { toast('Gagal menyimpan: ' + x.message, 'er'); }
     });
@@ -1065,7 +1129,7 @@ PAGES.pujian = async () => {
   const modes = [['today', 'Hari ini'], ['next', 'Mendatang'], ['all', 'Semua']];
   const kp = S.kp ? '' : `<div class="card" style="margin-bottom:14px"><h3>Kode Pengawas</h3><p class="mu">Masukkan Kode Pengawas dari admin untuk melihat token ujian. Kode disimpan di perangkat ini.</p><div class="row wrap gap"><input class="inp" id="kpin" placeholder="Kode Pengawas" autocomplete="off" style="max-width:240px"><button class="btn pri" data-act="kpSet">Simpan kode</button></div></div>`;
   const card = u => { const s = UJB[ujStatus(u, now)];
-    return `<div class="card uc"><div class="row" style="justify-content:space-between;align-items:flex-start"><h3>${esc(u.judul)}</h3>${badge(s[0], s[1])}</div><div class="meta"><span>${esc(u.mapel)} &bull; ${u.durasiMenit} menit &bull; ${!u.tingkat || u.tingkat === 'SEMUA' ? 'Semua tingkat' : 'Kelas ' + u.tingkat}</span><span>${fmtDT(u.mulai)} &rarr; ${fmtDT(u.selesai)}${u.jamKe ? ' &bull; Jam ke-' + u.jamKe : ''}</span><span>Ruang: ${(u.ruangNama || []).length ? esc(u.ruangNama.join(', ')) : '-'}</span></div><div class="tokrow"><span class="mu">Token</span><span class="tok" id="tk_${u.id}">&bull;&bull;&bull;&bull;&bull;&bull;</span><small class="cd mu" data-cd="${u.id}"></small><button class="btn sm" data-act="pTokShow" data-id="${u.id}">${ic('eye', 15)}Lihat token</button></div></div>`; };
+    return `<div class="card uc"><div class="row" style="justify-content:space-between;align-items:flex-start"><h3>${esc(u.judul)}</h3>${badge(s[0], s[1])}</div><div class="meta">${subline(u)}<span>${fmtDT(u.mulai)} &rarr; ${fmtDT(u.selesai)}${u.jamKe ? ' &bull; Jam ke-' + u.jamKe : ''}</span>${ruangDD((u.ruangNama || []).slice().sort((x, y) => String(x).localeCompare(String(y), 'id', { numeric: true })))}</div><div class="tokrow"><span class="mu">Token</span><span class="tok" id="tk_${u.id}">&bull;&bull;&bull;&bull;&bull;&bull;</span><small class="cd mu" data-cd="${u.id}"></small><button class="btn sm" data-act="pTokShow" data-id="${u.id}">${ic('eye', 15)}Lihat token</button></div></div>`; };
   el.innerHTML = `<div class="ph"><h2>Data Ujian</h2></div>${kp}<div class="seg">${modes.map(([k, n]) => `<button class="${mode === k ? 'on' : ''}" data-act="pMode" data-m="${k}">${n}</button>`).join('')}</div>${L.length ? `<div class="grid g2">${L.map(card).join('')}</div>` : empty('Tidak ada ujian pada tampilan ini.')}`;
 };
 ACT.pMode = b => { S.pmode = b.dataset.m; PAGES.pujian(); };
@@ -2501,7 +2565,7 @@ async function openBapForm(jadwalId) {
     });
     S.form = F;
   } else {
-    S.form = { jadwalId, tanggal: j.tanggal, mapelNama: j.mapelNama, ruangId: j.ruangId, ruangNama: j.ruangNama, jamKe: j.jamKe || '', mulai: j.jamMulai || '', selesai: j.jamSelesai || '', kelas: [], siswaKelas: {}, kehadiranMap: {}, catatan: '', ttd: '', ttd2: '', openK: {}, pengawasId: S.user.pengawasId || '', pengawasNama: S.user.nama || '', pengawasNip: S.user.nip || '', ujianId: j.ujianId || '', pengawas2Id: '', pengawas2: '', pengawas2Nip: '', status: 'draf', dirty: false };
+    S.form = { jadwalId, tanggal: j.tanggal, mapelNama: j.mapelNama, jenisUjian: j.jenisUjian || '', ruangId: j.ruangId, ruangNama: j.ruangNama, jamKe: j.jamKe || '', mulai: j.jamMulai || '', selesai: j.jamSelesai || '', kelas: [], siswaKelas: {}, kehadiranMap: {}, catatan: '', ttd: '', ttd2: '', openK: {}, pengawasId: S.user.pengawasId || '', pengawasNama: S.user.nama || '', pengawasNip: S.user.nip || '', ujianId: j.ujianId || '', pengawas2Id: '', pengawas2: '', pengawas2Nip: '', status: 'draf', dirty: false };
     const r = S.data.ruang.find(x => x.id === j.ruangId);
     if (r && r.kelasBawaan && r.kelasBawaan.length) await withLoad(() => setKelas(r.kelasBawaan.filter(n => S.data.kelas.some(k => k.nama === n))));
   }
@@ -2616,7 +2680,7 @@ function collectBap() {
   }
   const rg = S.data.ruang.find(r => r.id === F.ruangId), p1 = pgOf(F.pengawasId, F.pengawasNama, F.pengawasNip), p2 = pgOf(F.pengawas2Id, F.pengawas2, F.pengawas2Nip);
   return {
-    jadwalId: F.jadwalId, tanggal: F.tanggal, mapelNama: F.mapelNama, ruangId: F.ruangId, ruangNama: rg ? rg.nama : (F.ruangNama || ''),
+    jadwalId: F.jadwalId, tanggal: F.tanggal, mapelNama: F.mapelNama, jenisUjian: F.jenisUjian || '', ruangId: F.ruangId, ruangNama: rg ? rg.nama : (F.ruangNama || ''),
     jamKe: numOrNull(F.jamKe), kelas: [...F.kelas], rekapKelas: rekap, jumlahSeharusnya: tot, hadir: hd, tidakHadir: tot - hd, kehadiran,
     mulai: F.mulai, selesai: F.selesai, ttd: F.ttd || '', ttd2: F.pengawas2Id ? F.ttd2 || '' : '',
     catatan: (F.catatan || '').trim(), pengawasId: F.pengawasId || '', pengawasNama: p1.nama, pengawasNip: p1.nip,
@@ -2693,12 +2757,12 @@ async function makePdf(b) {
   const need = h => { if (y + h > H - 16) { doc.addPage(); y = 20; } };
 
   doc.setFont('times', 'bold'); doc.setFontSize(12);
-  doc.text('BERITA ACARA PELAKSANAAN ' + String(st.jenisUjian || 'UJIAN').toUpperCase(), W / 2, y, { align: 'center' }); y += 5.5;
+  doc.text('BERITA ACARA PELAKSANAAN ' + String(b.jenisUjian || st.jenisUjian || 'UJIAN').toUpperCase(), W / 2, y, { align: 'center' }); y += 5.5;
   if (st.tahunAjaran) { doc.text('TAHUN PELAJARAN ' + st.tahunAjaran, W / 2, y, { align: 'center' }); y += 5.5; }
   y += 4;
 
   const d = parseD(b.tanggal);
-  const narasi = `Pada hari ini ${HARI[d.getDay()]}, tanggal ${d.getDate()} bulan ${BULAN[d.getMonth()]} tahun ${d.getFullYear()}, telah diselenggarakan ${st.jenisUjian || 'ujian'} mata pelajaran ${b.mapelNama}${b.jamKe ? ' pada jam ke-' + b.jamKe : ''} di ${st.nama || 'sekolah'} dari pukul ${b.mulai} sampai dengan pukul ${b.selesai} WIB, dengan rincian sebagai berikut:`;
+  const narasi = `Pada hari ini ${HARI[d.getDay()]}, tanggal ${d.getDate()} bulan ${BULAN[d.getMonth()]} tahun ${d.getFullYear()}, telah diselenggarakan ${b.jenisUjian || st.jenisUjian || 'ujian'} mata pelajaran ${b.mapelNama}${b.jamKe ? ' pada jam ke-' + b.jamKe : ''} di ${st.nama || 'sekolah'} dari pukul ${b.mulai} sampai dengan pukul ${b.selesai} WIB, dengan rincian sebagai berikut:`;
   doc.setFont('times', 'normal'); doc.setFontSize(11);
   const nl = doc.splitTextToSize(narasi, cw);
   doc.text(narasi, mL, y, { maxWidth: cw, align: 'justify' }); y += nl.length * 5 + 3;

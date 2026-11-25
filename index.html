@@ -2540,7 +2540,7 @@ function viewBapForm() {
     <div id="siswaBox">${siswaBox()}</div>
     <div class="card">${fld('Catatan selama pelaksanaan ujian', 'catatan', F.catatan, { type: 'textarea', rows: 4, attr: `data-f="catatan" ${dis}`, ph: 'Kosongkan jika tidak ada kejadian khusus' })}</div>
     <div class="card" id="ttdCard"><div id="ttdBox">${ttdBox()}</div></div>
-    <div class="bar">${ro ? '' : '<button class="btn" data-act="bsave">Simpan Draf</button><button class="btn pri" data-act="bfinal">Finalkan BAP</button>'}<button class="btn ghost" data-act="bpdf">${ic('download', 18)}Cetak PDF</button></div>`;
+    <div class="bar">${ro ? '' : '<button class="btn" data-act="bsave">Simpan Draf</button><button class="btn pri" data-act="bfinal">Kirim BAP</button>'}<button class="btn ghost" data-act="bpdf">${ic('download', 18)}Cetak PDF</button></div>`;
 }
 const refreshSiswa = () => { const el = $('#siswaBox'); if (el) el.innerHTML = siswaBox(); };
 const refreshKelas = () => { const k = $('#kelasBox'); if (k) k.innerHTML = kelasBox(); refreshSiswa(); };
@@ -2614,10 +2614,10 @@ async function saveBap(fin) {
       try { await DB.update('jadwal', F.jadwalId, { bapStatus: b.status }); const jj = S.data.jadwal.find(x => x.id === F.jadwalId); if (jj) jj.bapStatus = b.status; } catch (e) { console.error(e); }
       F.dibuatPada = b.dibuatPada; F.dirty = false;
       upsertLocal('bap', { ...b, id: F.jadwalId });
-      toast(fin ? 'BAP difinalkan dan terkunci.' : 'Draf tersimpan.'); render();
+      toast(fin ? 'BAP berhasil dikirim dan terkunci.' : 'Draf tersimpan.'); render();
     } catch (e) { F.status = prev; throw e; }
   };
-  if (fin) confirmBox('Finalkan BAP ini? Setelah final, BAP terkunci dan hanya admin yang dapat membukanya kembali.', doSave, 'Finalkan'); else await doSave();
+  if (fin) confirmBox('Kirim BAP ini? Setelah dikirim, BAP terkunci dan hanya admin yang dapat membukanya kembali.', doSave, 'Kirim'); else await doSave();
 }
 function guard(fn) {
   if (S.form && S.form.dirty && S.form.status !== 'final') confirmBox('Perubahan BAP belum disimpan dan akan hilang. Tetap keluar?', () => { S.form.dirty = false; fn(); }, 'Tetap keluar'); else fn();

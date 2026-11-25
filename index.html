@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Nerin Exam365</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Nerin%20Exam365%22%2C%22short_name%22%3A%22Exam365%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22fullscreen%22%2C%22display_override%22%3A%5B%22fullscreen%22%2C%22standalone%22%5D%2C%22background_color%22%3A%22%23ffffff%22%2C%22theme_color%22%3A%22%232563eb%22%7D">
+<link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><link rel="icon" type="image/png" href="/icon-192.png"><meta name="apple-mobile-web-app-title" content="Exam365"><meta name="mobile-web-app-capable" content="yes">
 <style>
 #app{--tx:#0f172a;--mu:#64748b;--pr:#2AA7FF;--pr2:#1d4ed8;--soft:#eff6ff;--bd:rgba(148,163,184,.32);--ok:#16a34a;--wa:#d97706;--er:#dc2626}
 #app,#app *{box-sizing:border-box}
@@ -496,6 +496,17 @@ html,body{overscroll-behavior:none}
 #app .ib[data-act=logout]{background:#FDE8EC;color:#E5334F;border:1px solid #F8C5CE;border-radius:12px;flex:none}
 #app .ib[data-act=logout]:hover,#app .ib[data-act=logout]:active{background:#E5334F;color:#fff}
 #app .ib[data-act=logout] svg{stroke:currentColor}
+
+#app .pwab{position:fixed;left:0;right:0;bottom:0;z-index:250;padding:12px 12px calc(12px + env(safe-area-inset-bottom));display:flex;justify-content:center;pointer-events:none}
+#app .pwac{pointer-events:auto;width:100%;max-width:440px;background:rgba(255,255,255,.96);border:1px solid #CFE6F8;border-radius:22px;padding:14px;box-shadow:0 -6px 30px rgba(40,120,200,.22);animation:pwaup .35s ease}
+@keyframes pwaup{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+#app .pwat{display:flex;gap:12px;align-items:center}
+#app .pwat img{width:46px;height:46px;border-radius:12px;flex:none}
+#app .pwat div>b:first-child{display:block;font-size:14.5px}#app .pwat small b{display:inline;font-size:inherit}
+#app .pwat small{display:block;color:#6F86A3;font-size:12.5px;line-height:1.4;margin-top:2px}
+#app .pwax{display:flex;gap:8px;margin-top:12px}
+#app .pwax .btn{flex:1;justify-content:center}
+#app .pwan{display:block;margin:8px auto 0;border:0;background:none;color:#8aa0b8;font:inherit;font-size:11.5px;cursor:pointer;text-decoration:underline}
 </style>
 </head>
 <body>
@@ -776,6 +787,7 @@ const MENU_PESERTA = [
 ];
 const menuOn = (m, p) => m.k === p || (m.k === 'm_mapel' && String(p).startsWith('m_'));
 function renderShell() {
+  document.querySelectorAll('.pwab').forEach(n => n.remove());
   const menus = S.role === 'admin' ? MENU_ADMIN : S.role === 'pengawas' ? MENU_PENGAWAS : MENU_PESERTA;
   const nav = menus.map(m => m.h ? `<div class="nav-h">${esc(m.h)}</div>` : `<button class="nav ${m.k === S.page ? 'on' : ''}" data-act="nav" data-k="${m.k}">${ic(m.i)}<span>${esc(m.t)}</span></button>`).join('');
   const bn = menus.filter(m => m.mob).map(m => `<button class="bnav ${menuOn(m, S.page) ? 'on' : ''}" data-act="nav" data-k="${m.k}">${ic(m.i, 20)}<span>${esc(m.s || m.t)}</span></button>`).join('');
@@ -1654,11 +1666,28 @@ ACT.lgDel = () => { S.logoTmp = ''; $('#lgp').innerHTML = lgoHtml(''); const f =
 ACT.kopPrev = b => busy(b, async () => { try { const doc = await newPdf(); const y = pdfKop(doc); pdfTitle(doc, y, 'CONTOH LAPORAN', [['Ujian', 'Contoh ujian'], ['Kelas', 'Semua kelas']]); pdfTtd(doc, y + 40); pdfSave(doc, 'pratinjau-kop.pdf'); } catch (x) { toast(x.message || 'Gagal membuat PDF', 'er'); } });
 
 /* ===================== PWA (1 FILE) ===================== */
+const PWA = { ev: null };
+const isStandalone = () => { try { return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; } catch (e) { return false; } };
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isMob = () => /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && innerWidth < 900);
+const pwaSnoozed = () => { try { const v = localStorage.getItem('nx_pwa'); if (v === 'never') return true; if (v && Date.now() - (+v) < 7 * 864e5) return true; } catch (e) { } return false; };
+function maybeInstallBanner() {
+  if (isStandalone() || !isMob() || pwaSnoozed() || document.querySelector('.pwab') || !document.querySelector('#view .login')) return;
+  const ios = isIOS(), can = !!PWA.ev;
+  const how = ios ? 'Ketuk tombol <b>Bagikan</b> <span class="pwai">&#11014;&#65039;</span> di Safari, lalu pilih <b>Tambah ke Layar Utama</b>.' : can ? 'Buka lebih cepat dari layar utama HP, tampil layar penuh seperti aplikasi.' : 'Buka menu browser (<b>&#8942;</b>), lalu pilih <b>Pasang aplikasi</b> atau <b>Tambahkan ke layar utama</b>.';
+  const el = document.createElement('div'); el.className = 'pwab';
+  el.innerHTML = `<div class="pwac"><div class="pwat"><img src="/icon-192.png" alt="" onerror="this.style.display='none'"><div><b>Pasang Nerin Exam365</b><small>${how}</small></div></div><div class="pwax">${can ? '<button class="btn pri" data-act="pwaInstall">Pasang</button>' : ''}<button class="btn ghost" data-act="pwaLater">${can || ios ? 'Nanti' : 'Mengerti'}</button></div><button class="pwan" data-act="pwaNever">Jangan tampilkan lagi</button></div>`;
+  $('#app').appendChild(el);
+}
+ACT.pwaInstall = async () => { const e = PWA.ev; if (!e) return; try { e.prompt(); await e.userChoice; } catch (x) { } PWA.ev = null; document.querySelectorAll('.pwab').forEach(n => n.remove()); };
+ACT.pwaLater = () => { try { localStorage.setItem('nx_pwa', String(Date.now())); } catch (e) { } document.querySelectorAll('.pwab').forEach(n => n.remove()); };
+ACT.pwaNever = () => { try { localStorage.setItem('nx_pwa', 'never'); } catch (e) { } document.querySelectorAll('.pwab').forEach(n => n.remove()); };
 function initPWA() {
   try {
-    if (!('serviceWorker' in navigator)) return;
-    const code = "self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('fetch',()=>{});";
-    navigator.serviceWorker.register(URL.createObjectURL(new Blob([code], { type: 'text/javascript' }))).catch(() => { });
+    window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); PWA.ev = e; setTimeout(maybeInstallBanner, 600); });
+    window.addEventListener('appinstalled', () => { PWA.ev = null; document.querySelectorAll('.pwab').forEach(n => n.remove()); try { localStorage.setItem('nx_pwa', 'never'); } catch (e) { } });
+    if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('/sw.js').catch(() => { });
+    setTimeout(maybeInstallBanner, 2500);
   } catch { }
 }
 
